@@ -1,0 +1,46 @@
+# Phase 2b model selection. Runs ONLY on the development period (2010-2019); the test period
+# (2020+) is not loaded into any metric here. Every configuration tried is listed below and
+# its results are kept in results/deep_tuning/, so the number of trials is on record
+# (it feeds the Deflated Sharpe Ratio in phase 4). Selection rule, fixed before running:
+# highest development Sharpe ratio, net of costs.
+experiment: deep_tuning
+seed: 42
+
+data:
+  dir: data
+  price_start: "2005-01-01"
+  price_end: null
+  benchmark: SPY
+
+backtest:
+  start: "2010-01-01"
+  end: "2019-12-31"
+  rebalance: M
+  lookback: 252
+  cost_bps: 10
+  universe_size: 100
+  universe_refresh: Y
+  liquidity_window: 63
+
+periods:
+  development: ["2010-01-01", "2019-12-31"]
+
+strategies:
+  - name: T0-phase2
+    type: deep_portfolio
+    params: {cvar_weight: 0.1}
+  - name: T1-static
+    type: deep_portfolio
+    params: {cvar_weight: 0.1, static_features: true}
+  - name: T2-static-vix
+    type: deep_portfolio
+    params: {cvar_weight: 0.1, static_features: true, use_vix: true}
+  - name: T3-static-vix-to0.5
+    type: deep_portfolio
+    params: {cvar_weight: 0.1, static_features: true, use_vix: true, turnover_weight: 0.5}
+  - name: T4-static-vix-to2
+    type: deep_portfolio
+    params: {cvar_weight: 0.1, static_features: true, use_vix: true, turnover_weight: 2.0}
+  - name: T5-static-vix-to0.5-nocvar
+    type: deep_portfolio
+    params: {cvar_weight: 0.0, static_features: true, use_vix: true, turnover_weight: 0.5}

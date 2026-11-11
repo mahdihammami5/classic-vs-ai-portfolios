@@ -24,6 +24,7 @@ class MarketData:
     rf: pd.Series  # daily risk-free rate aligned to ``returns.index``
     membership: Membership
     benchmark: pd.Series  # daily benchmark (SPY) total returns
+    vix: pd.Series | None = None  # CBOE VIX close, aligned to ``returns.index``
 
     @classmethod
     def load(cls, data_dir: str | Path) -> MarketData:
@@ -38,7 +39,12 @@ class MarketData:
         dollar_volume = (close * volume).iloc[1:]
         rf = rf.reindex(returns.index).ffill().fillna(0.0)
         benchmark = bench.iloc[:, 0].pct_change(fill_method=None).reindex(returns.index)
-        return cls(returns, dollar_volume, rf, membership, benchmark.rename(bench.columns[0]))
+        vix = None
+        if (processed / "vix.parquet").exists():
+            vix = pd.read_parquet(processed / "vix.parquet")["VIX"]
+            vix = vix.reindex(returns.index).ffill().bfill()
+        return cls(returns, dollar_volume, rf, membership,
+                   benchmark.rename(bench.columns[0]), vix)
 
 
 def build_dataset(cfg: DataConfig) -> None:

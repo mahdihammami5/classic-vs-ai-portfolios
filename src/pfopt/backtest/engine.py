@@ -101,6 +101,7 @@ def run_backtest(
             universe_at=lambda d, r=past_returns, v=past_volume: select_universe(
                 d, data.membership, r, v, cfg.universe_size, cfg.lookback,
                 cfg.liquidity_window),
+            vix=None if data.vix is None else data.vix.loc[:t],
         ))
         hist = past_returns[universe].iloc[-cfg.lookback :].dropna(axis=1)
         prev = w_prev.reindex(hist.columns).fillna(0.0)

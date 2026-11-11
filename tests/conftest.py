@@ -24,7 +24,8 @@ def make_market(n_assets: int = 12, n_days: int = 700, seed: int = 0) -> MarketD
     rf = pd.Series(0.0001, index=dates)
     membership = Membership.from_dict({"2000-01-01": tickers})
     benchmark = returns.mean(axis=1)
-    return MarketData(returns, dollar_volume, rf, membership, benchmark)
+    vix = pd.Series(20.0 * np.exp(rng.normal(0, 0.05, n_days).cumsum() * 0.1), index=dates)
+    return MarketData(returns, dollar_volume, rf, membership, benchmark, vix)
 
 
 @pytest.fixture

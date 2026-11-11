@@ -27,6 +27,7 @@ class RebalanceContext:
     universe: list[str]
     returns: pd.DataFrame
     universe_at: Callable[[pd.Timestamp], list[str]]
+    vix: pd.Series | None = None  # truncated at ``date`` like ``returns``
 
 
 class Strategy(ABC):

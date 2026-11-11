@@ -7,10 +7,12 @@ torch = pytest.importorskip("torch")
 from pfopt.backtest.engine import run_backtest  # noqa: E402
 from pfopt.config import BacktestConfig  # noqa: E402
 from pfopt.strategies.deep import (  # noqa: E402
+    STATIC_WINDOW,
     VOL_WINDOW,
     DeepPortfolio,
     PortfolioNet,
     make_features,
+    make_static,
     portfolio_loss,
 )
 
@@ -56,6 +58,32 @@ def test_loss_prefers_the_better_asset():
     good = portfolio_loss(torch.tensor([[0.9, 0.1]]), future, 0.1, 1.0, 0.0)
     bad = portfolio_loss(torch.tensor([[0.1, 0.9]]), future, 0.1, 1.0, 0.0)
     assert good < bad
+
+
+def test_static_features_are_cross_sectional_zscores():
+    R = np.random.default_rng(1).normal(0.0005, 0.01, (STATIC_WINDOW, 8))
+    R[:, 0] += 0.002  # stock 0 has strong momentum
+    S = make_static(R)
+    assert S.shape == (8, 4)
+    np.testing.assert_allclose(S.mean(axis=0), 0.0, atol=1e-5)
+    assert S[0, 0] == S[:, 0].max()
+
+
+def test_turnover_penalty_increases_loss_for_trading():
+    future = torch.zeros(2, 10, 3)
+    w = torch.tensor([[0.5, 0.3, 0.2], [0.2, 0.3, 0.5]])
+    same = portfolio_loss(w, future, 0.0, 1.0, 0.0, prev_weights=w.clone(), turnover_weight=1.0)
+    flipped = portfolio_loss(w, future, 0.0, 1.0, 0.0, prev_weights=w.flip(0),
+                             turnover_weight=1.0)
+    assert flipped > same
+
+
+def test_phase2b_options_run_end_to_end():
+    market = make_market(n_assets=6, n_days=700)
+    cfg = BacktestConfig(start="2016-06-01", lookback=252, universe_size=6, liquidity_window=20)
+    res = run_backtest(tiny(use_vix=True, static_features=True, turnover_weight=0.5),
+                       market, cfg)
+    np.testing.assert_allclose(res.weights.sum(axis=1), 1.0)
 
 
 def test_training_samples_never_use_future_returns():

@@ -70,6 +70,36 @@ tail risk, at a cost in return. This matches recent literature (Fernandes & Dese
 a Sharpe of 0.29 on 2022–23): with price-only inputs there is little signal to learn, and early
 stopping triggers after ~6 epochs. Full tables: [`results/deep/metrics.md`](results/deep/metrics.md).
 
+### Phase 2b: can richer inputs fix it? A controlled tuning experiment
+
+Three additions: a per-stock profile (12-1 month momentum, 1-month reversal, 1-year volatility
+and beta, z-scored across stocks), the VIX index as a daily input, and a turnover penalty in the
+loss. **Protocol:** 6 variants were run walk-forward on **2010–2019 only**, the selection rule
+(highest development Sharpe) was fixed before running, and only the winner was then run
+**once** on 2020+. All trials are kept in [`results/deep_tuning/`](results/deep_tuning/metrics.md).
+
+| Trial (development 2010–2019) | Sharpe | Max drawdown | Turnover / yr |
+|---|---:|---:|---:|
+| T0: phase-2 model (reproduced exactly) | 0.88 | -23.2% | 165% |
+| T1: + stock profile | 0.91 | -17.7% | 217% |
+| **T2: + stock profile + VIX (selected)** | **0.93** | -17.5% | 209% |
+| T3: T2 + turnover penalty 0.5 | 0.87 | -21.6% | 107% |
+| T4: T2 + turnover penalty 2.0 | 0.86 | -22.4% | 56% |
+| T5: T3 without CVaR | 0.82 | -27.8% | 81% |
+| SPY | 0.90 | -19.3% | – |
+
+| Out-of-sample test, 2020 → Nov 2026 | Development Sharpe | **Test Sharpe** | Test max drawdown |
+|---|---:|---:|---:|
+| DeepPortfolio (phase 2) | 0.88 | 0.51 | -29.3% |
+| DeepPortfolio-v2 (T2) | 0.93 | **0.50** | -28.3% |
+| SPY | 0.90 | 0.64 | -33.7% |
+
+**The development gain did not survive out of sample.** A +0.05 Sharpe difference over ten
+years is within noise, and picking the best of six variants rewards luck, which is exactly what
+the locked test set is there to expose. The turnover penalty, however, works as intended: T4
+cuts trading by two thirds for a small development cost, which is the most useful lever if
+costs are higher than 10 bps. Full test tables: [`results/deep_v2/metrics.md`](results/deep_v2/metrics.md).
+
 ## How the evaluation stays honest
 
 * **Point-in-time universe**: stocks are chosen from the S&P 500 members *on that date*
@@ -94,7 +124,7 @@ pip install torch --index-url https://download.pytorch.org/whl/cu126
 
 pfopt download --config configs/baselines.yaml   # ~3 min, free public data
 pfopt backtest --config configs/baselines.yaml   # ~3 min on a laptop CPU
-pytest                                           # 33 tests, synthetic data, no network
+pytest                                           # 36 tests, synthetic data, no network
 ```
 
 Results (tables, figures, weights) are written to `results/<experiment>/`. A new strategy is
@@ -120,7 +150,7 @@ legacy/             the original course notebook this project grew from
 - [x] **Phase 1**: data pipeline, backtester, classic baselines, genetic algorithm + WoC
 - [x] **Phase 2**: end-to-end deep learning portfolio (attention-LSTM + cross-asset Transformer
       trained directly on a Sharpe/CVaR objective, following Fernandes & Desell, 2026)
-- [ ] **Phase 2b**: richer inputs (momentum, VIX, sectors) and a turnover-aware loss,
+- [x] **Phase 2b**: richer inputs (momentum, VIX, sectors) and a turnover-aware loss,
       tuned on 2010–2019 only, with every tried configuration logged
 - [ ] **Phase 3**: time-series foundation model (Chronos) forecasts → optimizer, zero-shot vs fine-tuned
 - [ ] **Phase 4**: statistical significance (bootstrap Sharpe CIs, Deflated Sharpe Ratio),
