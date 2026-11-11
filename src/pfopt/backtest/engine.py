@@ -20,7 +20,7 @@ import pandas as pd
 from pfopt.config import BacktestConfig
 from pfopt.data.market import MarketData
 from pfopt.data.universe import select_universe
-from pfopt.strategies.base import Strategy
+from pfopt.strategies.base import RebalanceContext, Strategy
 
 log = logging.getLogger(__name__)
 
@@ -94,7 +94,15 @@ def run_backtest(
             if not universe:
                 raise ValueError(f"Empty universe on {t.date()}: not enough price history.")
 
-        hist = data.returns.loc[:t, universe].iloc[-cfg.lookback :].dropna(axis=1)
+        past_returns = data.returns.loc[:t]
+        past_volume = data.dollar_volume.loc[:t]
+        strategy.on_rebalance(RebalanceContext(
+            date=t, step=i, universe=list(universe), returns=past_returns,
+            universe_at=lambda d, r=past_returns, v=past_volume: select_universe(
+                d, data.membership, r, v, cfg.universe_size, cfg.lookback,
+                cfg.liquidity_window),
+        ))
+        hist = past_returns[universe].iloc[-cfg.lookback :].dropna(axis=1)
         prev = w_prev.reindex(hist.columns).fillna(0.0)
         rng = np.random.default_rng([seed, i])
         target = _validate_weights(strategy.allocate(hist, prev, rng), strategy.name)
@@ -131,4 +139,5 @@ def run_backtest(
         turnover=pd.Series(turnover, name="turnover"),
         costs=pd.Series(costs, name="cost"),
         runtime_s=runtime,
+        meta=strategy.report(),
     )

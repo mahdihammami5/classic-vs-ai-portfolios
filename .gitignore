@@ -18,3 +18,6 @@ Thumbs.db
 .vscode/
 .idea/
 .ipynb_checkpoints/
+
+# Local run logs
+*_log.txt

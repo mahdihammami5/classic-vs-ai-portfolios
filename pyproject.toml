@@ -24,6 +24,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=7.4", "ruff>=0.5"]
+# GPU users: install torch from https://pytorch.org first to get the CUDA build.
+deep = ["torch>=2.2"]
 
 [project.scripts]
 pfopt = "pfopt.cli:main"

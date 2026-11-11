@@ -1,0 +1,59 @@
+# Phase 2: end-to-end deep learning portfolio vs the best phase-1 baselines.
+# Same data, universe, costs and periods as configs/baselines.yaml, so results are comparable.
+# Hyperparameters were fixed a priori (small model, standard settings); nothing was tuned
+# on the 2020+ test period.
+experiment: deep
+seed: 42
+
+data:
+  dir: data
+  price_start: "2005-01-01"
+  price_end: null
+  benchmark: SPY
+
+backtest:
+  start: "2010-01-01"
+  end: null
+  rebalance: M
+  lookback: 252
+  cost_bps: 10
+  universe_size: 100
+  universe_refresh: Y
+  liquidity_window: 63
+
+periods:
+  full:        ["2010-01-01", null]
+  development: ["2010-01-01", "2019-12-31"]
+  test:        ["2020-01-01", null]
+  covid_crash: ["2020-02-19", "2020-03-23"]
+  bear_2022:   ["2022-01-03", "2022-10-12"]
+
+strategies:
+  - name: EqualWeight
+    type: equal_weight
+  - name: MinVariance
+    type: min_variance
+    params: {max_weight: 0.10}
+  - name: GA
+    type: genetic_woc
+    params: {woc: false, max_weight: 0.10}
+  # Main model: Sharpe + CVaR objective, 5-model deep ensemble, retrained every January.
+  - name: DeepPortfolio
+    type: deep_portfolio
+    params:
+      seq_len: 60
+      horizon: 21
+      hidden: 32
+      n_models: 5
+      cvar_weight: 0.1
+      max_weight: 0.10
+  # Ablation: same model trained on Sharpe only (does the CVaR term help in crises?).
+  - name: DeepPortfolio-SharpeOnly
+    type: deep_portfolio
+    params:
+      seq_len: 60
+      horizon: 21
+      hidden: 32
+      n_models: 5
+      cvar_weight: 0.0
+      max_weight: 0.10

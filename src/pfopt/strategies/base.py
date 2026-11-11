@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
+from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
@@ -11,15 +13,39 @@ from sklearn.covariance import LedoitWolf
 TRADING_DAYS = 252
 
 
+@dataclass
+class RebalanceContext:
+    """Everything a learning strategy may use on a rebalance date, and nothing later.
+
+    ``returns`` is truncated at ``date`` by the engine, and ``universe_at`` re-runs the
+    point-in-time universe selection on that truncated data, so a model that trains here
+    cannot see the future.
+    """
+
+    date: pd.Timestamp
+    step: int
+    universe: list[str]
+    returns: pd.DataFrame
+    universe_at: Callable[[pd.Timestamp], list[str]]
+
+
 class Strategy(ABC):
     """A long-only, fully invested allocation rule.
 
     ``allocate`` receives only past data: ``hist`` is a (days x assets) frame of daily
-    returns ending on the rebalance date, with no missing values.
+    returns ending on the rebalance date, with no missing values. Strategies that learn
+    from longer history (e.g. neural networks) override ``on_rebalance`` to (re)train.
     """
 
     def __init__(self, name: str):
         self.name = name
+
+    def on_rebalance(self, ctx: RebalanceContext) -> None:  # noqa: B027 - optional hook
+        """Called before ``allocate`` on every rebalance date. Default: nothing."""
+
+    def report(self) -> dict:
+        """Extra information saved with the results (e.g. training logs)."""
+        return {}
 
     @abstractmethod
     def allocate(

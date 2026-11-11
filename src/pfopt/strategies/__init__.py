@@ -23,9 +23,19 @@ REGISTRY: dict[str, type[Strategy]] = {
 }
 
 
+# Strategies with heavy optional dependencies (PyTorch) are imported only when used.
+LAZY = {"deep_portfolio": ("pfopt.strategies.deep", "DeepPortfolio")}
+
+
 def build_strategy(spec: StrategySpec) -> Strategy:
+    if spec.type in LAZY:
+        import importlib
+
+        module, cls = LAZY[spec.type]
+        return getattr(importlib.import_module(module), cls)(spec.name, **spec.params)
     if spec.type not in REGISTRY:
-        raise KeyError(f"Unknown strategy type {spec.type!r}. Available: {sorted(REGISTRY)}")
+        known = sorted([*REGISTRY, *LAZY])
+        raise KeyError(f"Unknown strategy type {spec.type!r}. Available: {known}")
     return REGISTRY[spec.type](spec.name, **spec.params)
 
 

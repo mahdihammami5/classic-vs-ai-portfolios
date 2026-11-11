@@ -142,6 +142,7 @@ def save_run(
         plot_drawdowns(results, data, out_dir / "drawdowns_test.png", periods["test"])
 
     run_info["runtime_s"] = {r.name: round(r.runtime_s, 2) for r in results}
+    run_info["strategy_meta"] = {r.name: r.meta for r in results if r.meta}
     (out_dir / "run_info.json").write_text(json.dumps(run_info, indent=2, default=str),
                                            encoding="utf-8")
     return table
