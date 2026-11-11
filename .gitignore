@@ -9,8 +9,9 @@ __pycache__/
 # Data (re-downloadable with `pfopt download`)
 /data/
 
-# Heavy experiment outputs (figures + metrics tables are committed)
-results/**/*.parquet
+# Experiment outputs are small and committed (the dashboard reads them); only the
+# per-stock forecast dumps are left out.
+results/**/forecasts_*.parquet
 
 # OS / editors
 .DS_Store

@@ -11,7 +11,9 @@ fairly with the other strategies:
 * the previous portfolio is seeded into the population, so the search starts from what
   is already held (lower turnover);
 * Wisdom of Crowds: the final portfolio is the average of the ``crowd_size`` fittest
-  individuals instead of the single best one, which averages out estimation noise.
+  individuals instead of the single best one, which averages out estimation noise;
+* optional cost-aware fitness: ``Sharpe - turnover_penalty x one-way turnover`` from the
+  current holdings, so the search only moves away from them when the gain is worth it.
 """
 
 from __future__ import annotations
@@ -37,6 +39,7 @@ class GeneticWoC(Strategy):
         crowd_size: int = 10,
         woc: bool = True,
         max_weight: float = 0.10,
+        turnover_penalty: float = 0.0,
     ):
         super().__init__(name)
         self.population = population
@@ -50,6 +53,7 @@ class GeneticWoC(Strategy):
         self.crowd_size = crowd_size
         self.woc = woc
         self.max_weight = max_weight
+        self.turnover_penalty = turnover_penalty
         self.last_progress: list[float] = []
 
     @staticmethod
@@ -57,6 +61,17 @@ class GeneticWoC(Strategy):
         ret = W @ mu
         vol = np.sqrt(np.einsum("ij,jk,ik->i", W, sigma, W))
         return ret / np.maximum(vol, 1e-12)
+
+    def fitness(
+        self, W: np.ndarray, mu: np.ndarray, sigma: np.ndarray, prev: np.ndarray
+    ) -> np.ndarray:
+        fit = self.sharpe(W, mu, sigma)
+        if self.turnover_penalty > 0:
+            # Holdings outside the current universe (prev sums to < 1) must be sold anyway.
+            outside = max(0.0, 1.0 - float(prev.sum()))
+            turnover = 0.5 * (np.abs(W - prev).sum(axis=1) + outside)
+            fit = fit - self.turnover_penalty * turnover
+        return fit
 
     def _init_population(self, n: int, prev: np.ndarray, rng: np.random.Generator) -> np.ndarray:
         P = self.population
@@ -79,7 +94,7 @@ class GeneticWoC(Strategy):
         n_children = P - self.elite
         progress = []
         for _ in range(self.generations):
-            fit = self.sharpe(pop, mu, sigma)
+            fit = self.fitness(pop, mu, sigma, prev)
             progress.append(float(fit.max()))
             elites = pop[np.argsort(fit)[-self.elite :]]
 
@@ -95,7 +110,7 @@ class GeneticWoC(Strategy):
             children = children + mask * rng.normal(0.0, self.mutation_scale, children.shape)
             pop = np.vstack([elites, cap_weights(children, self.max_weight)])
 
-        fit = self.sharpe(pop, mu, sigma)
+        fit = self.fitness(pop, mu, sigma, prev)
         self.last_progress = progress
         return pop, fit
 

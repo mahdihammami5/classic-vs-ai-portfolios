@@ -68,3 +68,61 @@ def test_universe_picks_most_liquid(market, bt_cfg):
     res = run_backtest(EqualWeight("EW"), market, bt_cfg)
     # Dollar volume decreases with the asset number, so S10 and S11 are excluded.
     assert set(res.weights.columns) == {f"S{i:02d}" for i in range(10)}
+
+
+class Rotator(Strategy):
+    """All-in on a different asset at every call: maximal turnover."""
+
+    def __init__(self):
+        super().__init__("Rotator")
+        self.calls = 0
+
+    def allocate(self, hist, prev, rng):
+        w = pd.Series(0.0, index=hist.columns)
+        w.iloc[self.calls % len(w)] = 1.0
+        self.calls += 1
+        return w
+
+
+def test_default_policy_equals_plain_calendar(market, bt_cfg):
+    from pfopt.config import RebalancePolicy
+
+    a = run_backtest(EqualWeight("ew"), market, bt_cfg)
+    b = run_backtest(EqualWeight("ew"), market, bt_cfg, policy=RebalancePolicy())
+    pd.testing.assert_series_equal(a.returns, b.returns)
+    assert (a.events.reason.iloc[1:] == "schedule").all()
+
+
+def test_no_trade_band_skips_small_trades(market, bt_cfg):
+    from pfopt.config import RebalancePolicy
+
+    plain = run_backtest(EqualWeight("ew"), market, bt_cfg)
+    banded = run_backtest(EqualWeight("ew"), market, bt_cfg, policy=RebalancePolicy(band=0.5))
+    assert len(banded.weights) == 1  # equal weight never drifts 50% away: only initial trade
+    assert not banded.events.traded.iloc[1:].any()
+    assert banded.costs.sum() < plain.costs.sum()
+    # Large trades still go through.
+    rot = run_backtest(Rotator(), market, bt_cfg, policy=RebalancePolicy(band=0.5))
+    assert rot.events.traded.all()
+
+
+def test_drift_and_vix_triggers(market, bt_cfg):
+    from pfopt.config import RebalancePolicy
+
+    pol = RebalancePolicy(schedule="Y", check="W", drift=0.02)
+    res = run_backtest(EqualWeight("ew"), market, bt_cfg, policy=pol)
+    trig = res.events[res.events.reason == "drift"]
+    assert len(trig) > 0 and (trig.drift > 0.02).all()
+
+    level = float(market.vix.loc[bt_cfg.start:].median())
+    res = run_backtest(EqualWeight("ew"), market, bt_cfg,
+                       policy=RebalancePolicy(schedule="Y", check="D", vix_level=level))
+    for _, e in res.events[res.events.reason.str.startswith("vix")].iterrows():
+        v = market.vix.loc[: e.date]
+        assert (v.iloc[-1] >= level) == (e.reason == "vix_up")
+
+
+def test_contributions_add_up_to_gross_return(market, bt_cfg):
+    res = run_backtest(EqualWeight("ew"), market, bt_cfg)
+    by_year = res.gross_returns.groupby(res.gross_returns.index.year).sum()
+    np.testing.assert_allclose(res.contributions.sum(axis=1).to_numpy(), by_year.to_numpy())

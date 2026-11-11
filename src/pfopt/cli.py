@@ -2,6 +2,7 @@
 
     pfopt download --config configs/baselines.yaml
     pfopt backtest --config configs/baselines.yaml [--only EqualWeight,MinVariance]
+    pfopt analyze  [--results results] [--out results/analysis]
 """
 
 from __future__ import annotations
@@ -36,7 +37,8 @@ def cmd_backtest(args: argparse.Namespace) -> None:
     results = []
     for spec in specs:
         log.info("Running %s", spec.name)
-        results.append(run_backtest(build_strategy(spec), data, cfg.backtest, seed=cfg.seed))
+        results.append(run_backtest(build_strategy(spec), data, cfg.backtest, seed=cfg.seed,
+                                    policy=spec.rebalance))
 
     out_dir = Path(cfg.output_dir) / cfg.experiment
     info = {
@@ -49,6 +51,15 @@ def cmd_backtest(args: argparse.Namespace) -> None:
     for period in table.index.get_level_values(0).unique():
         print(f"\n=== {period} ===\n{to_markdown(table, period)}")
     print(f"\nSaved results to {out_dir}")
+
+
+def cmd_analyze(args: argparse.Namespace) -> None:
+    from pfopt.robustness import run_analysis
+
+    data = MarketData.load(args.data)
+    out = run_analysis(Path(args.results), data, Path(args.out), n_boot=args.n_boot)
+    print(out["significance"].round(3).to_string())
+    print(f"\nSaved analysis to {args.out}")
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -66,6 +77,13 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--config", required=True)
     p.add_argument("--only", help="comma-separated strategy names to run")
     p.set_defaults(func=cmd_backtest)
+
+    p = sub.add_parser("analyze", help="significance tests and crisis analysis, all experiments")
+    p.add_argument("--results", default="results")
+    p.add_argument("--out", default="results/analysis")
+    p.add_argument("--data", default="data")
+    p.add_argument("--n-boot", type=int, default=5000)
+    p.set_defaults(func=cmd_analyze)
 
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,

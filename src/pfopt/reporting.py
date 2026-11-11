@@ -171,8 +171,14 @@ def save_run(
     (out_dir / "metrics.md").write_text("\n".join(md), encoding="utf-8")
 
     pd.concat([r.returns for r in results], axis=1).to_parquet(out_dir / "returns.parquet")
+    pd.concat([r.turnover.rename(r.name) for r in results], axis=1).to_parquet(
+        out_dir / "turnover.parquet")
     for r in results:
         r.weights.to_parquet(out_dir / f"weights_{r.name}.parquet")
+        if not r.contributions.empty:
+            r.contributions.to_parquet(out_dir / f"contributions_{r.name}.parquet")
+        if not r.events.empty:
+            r.events.to_csv(out_dir / f"rebalances_{r.name}.csv", index=False)
 
     plot_equity(results, data, out_dir / "equity.png", periods.get("test"))
     if "test" in periods:

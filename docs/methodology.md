@@ -64,6 +64,40 @@ days) and annual one-way turnover.
 | Risk parity | Every stock contributes the same share of risk |
 | GA / GA+WoC | Genetic algorithm maximizing Sharpe; WoC averages the 10 best individuals |
 
+## When to trade (phase 4)
+
+Every strategy can carry a rebalancing policy (`rebalance:` in its YAML entry):
+
+| Setting | Meaning |
+|---|---|
+| `schedule` | calendar rebalancing: `D`, `W`, `M`, `Q` or `Y` (last trading day of the period) |
+| `check` | extra dates (`D` or `W`) on which the triggers below are evaluated |
+| `drift` | rebalance when holdings have drifted more than this one-way share from the last target |
+| `vix_level` | rebalance when the VIX closes on the other side of this level than at the previous check |
+| `band` | no-trade band: re-optimize, but skip the trade if the new target is closer than this (one-way) to the holdings |
+| `min_gap` | minimum trading days between two trigger-driven rebalances |
+
+Triggers only look at data up to the check date, and trades still execute at that day's close.
+Every decision (date, reason, traded or skipped, drift) is saved in `rebalances_<strategy>.csv`.
+The GA can also use a **cost-aware fitness**: Sharpe − λ × one-way turnover from current holdings.
+
+## Statistical tests (phase 4)
+
+`pfopt analyze` reads the returns of every experiment and writes `results/analysis/`:
+
+* **Bootstrap confidence intervals.** Stationary block bootstrap (Politis & Romano, 1994; mean
+  block 21 days, 5,000 resamples) of the annualized excess-return Sharpe ratio. The Sharpe
+  difference with SPY resamples the same days for both series (paired), giving a two-sided
+  p-value.
+* **Probabilistic and Deflated Sharpe Ratio** (Bailey & López de Prado, 2012, 2014). PSR is the
+  probability that the true Sharpe is above 0 given the track-record length, skewness and
+  kurtosis. DSR raises the bar to the Sharpe the best of N skill-less strategies would reach by
+  chance, where N counts every configuration tried in the project, tuning trials included.
+* **Crisis table.** Every SPY drawdown deeper than 15% since 2010, peak to trough. The windows
+  are chosen from SPY alone so no strategy can benefit from a hand-picked window.
+* **Return attribution.** The backtester records each stock's daily contribution (weight ×
+  return, before costs), summed per year (`contributions_<strategy>.parquet`).
+
 ## Known limitations
 
 * **Residual survivorship bias**: Yahoo has no prices for many delisted or acquired companies.
@@ -73,4 +107,4 @@ days) and annual one-way turnover.
   company's history.
 * **Costs**: a flat 10 bps ignores market impact and bid-ask differences between stocks.
 * **Single path**: one historical path, so results should be read with the confidence intervals
-  added in phase 4.
+  of phase 4. With ~7 years of test data, Sharpe ratio confidence intervals are about ±0.7 wide.

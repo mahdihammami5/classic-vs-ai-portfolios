@@ -71,3 +71,13 @@ def test_genetic_algorithm_improves_fitness_and_is_reproducible(hist):
     assert ga.last_progress[-1] >= ga.last_progress[0]  # elitism: never gets worse
     w2 = ga.allocate(hist, prev, np.random.default_rng(7))
     pd.testing.assert_series_equal(w1, w2)
+
+
+def test_turnover_penalty_keeps_the_ga_closer_to_current_holdings(hist):
+    prev = pd.Series(1.0 / hist.shape[1], index=hist.columns)
+    dist = {}
+    for lam in (0.0, 5.0):
+        ga = GeneticWoC("ga", population=40, generations=60, woc=False, turnover_penalty=lam)
+        w = ga.allocate(hist, prev, np.random.default_rng(3))
+        dist[lam] = 0.5 * float((w - prev).abs().sum())
+    assert dist[5.0] < dist[0.0]

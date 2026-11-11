@@ -4,9 +4,14 @@
 transaction costs and test them fairly?**
 
 This project is a reproducible, walk-forward benchmark that puts classic portfolio
-construction, evolutionary optimization and (coming next) deep learning and time-series
-foundation models through the **same honest backtester** on 16 years of S&P 500 data,
-including the 2020 COVID crash and the 2022 bear market.
+construction, evolutionary optimization, deep learning and time-series foundation models
+through the **same honest backtester** on 16 years of S&P 500 data, including the 2020 COVID
+crash and the 2022 bear market, and then asks whether any winner is **better than luck**.
+
+**Short answer:** after costs, a genetic algorithm had the best test Sharpe (0.82 vs 0.64 for
+SPY), the deep learning and foundation-model portfolios did not beat the market, and with ~7
+years of test data **no strategy's edge over SPY is statistically significant** once you
+account for the 35 configurations tried. An interactive dashboard lets you explore every run.
 
 ![Growth of $1](results/baselines/equity.png)
 
@@ -34,8 +39,8 @@ What the numbers say so far:
   vs 24.1% for SPY, but it lagged badly in the 2023–2026 rally.
 * **The genetic algorithm has the best Sharpe ratio**, but it trades ~2.7x its portfolio per year,
   and averaging the crowd (WoC) did not improve on the single best individual.
-* These gaps are **not yet tested for statistical significance**. That is phase 4, and it matters:
-  one historical path can easily make a lucky strategy look skilled.
+* These gaps turn out **not to be statistically significant** (phase 4 below): one historical
+  path can easily make a lucky strategy look skilled.
 
 Full tables for every period (development 2010–2019, COVID crash, 2022 bear market) are in
 [`results/baselines/metrics.md`](results/baselines/metrics.md).
@@ -134,6 +139,101 @@ What this shows:
 
 Full tables, including both crises: [`results/foundation/metrics.md`](results/foundation/metrics.md).
 
+## Phase 4: when to trade, and is any of it better than luck?
+
+### 4a. Smarter rebalancing for the genetic algorithm
+
+The GA re-optimizes every month and its fitness ignores trading costs, so it reshuffles ~2.7x its
+portfolio a year. Three fixes were added to the backtester and tested with the same protocol as
+phase 2b (grid on 2010–2019 only, selection rule fixed in advance, test run once):
+
+* **Cost-aware fitness**: Sharpe − λ × turnover from current holdings (λ = 4 selected).
+* **No-trade band**: re-optimize monthly, but skip the trade unless the new portfolio differs from
+  holdings by at least 20%.
+* **Event-driven**: rebalance quarterly, plus whenever the VIX crosses 30 (checked weekly) or
+  holdings drift 10% away from target.
+
+| GA variant | Dev Sharpe (2010–19) | **Test Sharpe** | Test turnover / yr | 2022 bear market |
+|---|---:|---:|---:|---:|
+| Monthly (phase 1) | 0.89 | 0.82 | 274% | -12.3% |
+| No-trade band 20% | 0.93 | **0.83** | 247% | -11.6% |
+| Quarterly + VIX events | 0.94 | 0.74 | 228% | -12.4% |
+| Cost-aware fitness (λ = 4) | **1.06** | 0.73 | **32%** | -23.1% |
+| Cost-aware + events | – | 0.71 | 32% | -26.6% |
+| SPY | 0.90 | 0.64 | – | -24.1% |
+
+* **Cost-aware fitness cuts trading by 88%** and was the clear winner in development, but in the
+  test period it lost Sharpe: a portfolio that rarely changes adapted slowly when 2022 rotated
+  away from growth stocks. Less trading is not free: it also means slower reaction. (λ = 4 was
+  the largest value in the grid; per the pre-registered rule it was not extended.)
+* **The no-trade band is a small free win**: same Sharpe, 10% less trading.
+* The drift trigger never fired in 2010–2019 (holdings never drifted 10% within a quarter); the
+  VIX trigger fired 10 times (5 crossings up, 5 down). Every decision is logged
+  (`results/rebalancing/rebalances_*.csv`). Full tables:
+  [`results/rebalancing/metrics.md`](results/rebalancing/metrics.md).
+
+**Where did the GA's return come from?** The backtester now records each stock's contribution.
+In 2020–2026, **NVDA and LLY alone produced 20% of the GA's gross return** and the top 5 stocks
+38%: the GA's edge is concentrated in a few momentum winners it held at the 10% cap.
+
+![GA allocation](results/baselines/ga_allocation.png)
+
+### 4b. Is it skill or luck?
+
+For every strategy, the test-period Sharpe ratio gets a 95% confidence interval from a
+**stationary block bootstrap**, a paired bootstrap test against SPY, and the **Deflated Sharpe
+Ratio** (Bailey & López de Prado, 2014), which corrects for having tried 35 configurations in
+this project: the best of 35 skill-less strategies would reach a Sharpe of ~0.35 by chance alone.
+
+![Sharpe confidence intervals](results/analysis/sharpe_ci_test.png)
+
+| Test 2020 → Nov 2026 | Sharpe [95% CI] | Sharpe − SPY [95% CI] | p-value | DSR |
+|---|---|---|---:|---:|
+| GA, no-trade band | 0.83 [0.20, 1.58] | +0.19 [−0.22, +0.59] | 0.34 | 89% |
+| GA | 0.82 [0.19, 1.57] | +0.18 [−0.24, +0.59] | 0.39 | 89% |
+| Mean-variance | 0.69 [0.08, 1.38] | +0.05 [−0.50, +0.54] | 0.89 | 81% |
+| SPY | 0.64 [0.00, 1.40] | | | |
+| Equal weight | 0.63 [0.01, 1.39] | −0.01 [−0.18, +0.15] | 0.91 | 77% |
+| Chronos-2 + LoRA | 0.55 [−0.07, 1.26] | −0.09 [−0.47, +0.23] | 0.58 | 70% |
+| DeepPortfolio | 0.51 [−0.10, 1.26] | −0.13 [−0.53, +0.25] | 0.50 | 66% |
+
+* **No strategy beats SPY with statistical significance.** Every confidence interval for the
+  difference with SPY contains zero, and no DSR reaches 95%. Seven years of daily data are
+  simply too short to separate a 0.2 Sharpe edge from luck: the intervals are ±0.7 wide.
+* The only significant difference is negative: Chronos-2 with cross-learning *underperformed*
+  SPY (p = 0.04).
+* All 20 strategies: [`results/analysis/README.md`](results/analysis/README.md).
+
+### 4c. Crises
+
+Every SPY drawdown deeper than 15% since 2010 (6 episodes, windows chosen by SPY alone):
+
+| Peak → trough | SPY | Min variance | DeepPortfolio-v2 | GA | Equal weight |
+|---|---:|---:|---:|---:|---:|
+| Apr–Jul 2010 (flash crash, euro crisis) | -15.7% | -10.0% | -17.5% | -18.8% | -17.2% |
+| Apr–Oct 2011 (US downgrade) | -18.6% | -5.1% | -17.3% | -15.5% | -23.4% |
+| Sep–Dec 2018 | -19.3% | -13.9% | -12.8% | -22.7% | -20.2% |
+| Feb–Mar 2020 (COVID) | -33.7% | -27.9% | -28.0% | -30.5% | -34.6% |
+| Jan–Oct 2022 (bear market) | -24.5% | -12.7% | -13.3% | -12.4% | -25.0% |
+| Feb–Apr 2025 (tariff shock) | -18.8% | -11.0% | -9.4% | -14.8% | -20.2% |
+| **Average** | **-21.8%** | **-13.4%** | -16.4% | -19.1% | -23.4% |
+
+Minimum variance is the most reliable crisis hedge (better than SPY in all six episodes), and the
+defensive deep learning portfolio comes second: they lose in rallies what they save in crashes.
+
+### Interactive dashboard
+
+```bash
+pip install -e ".[dashboard]"
+streamlit run app/dashboard.py
+```
+
+Five tabs: performance for any period and set of strategies, the significance tests, a crisis
+heatmap, a **portfolio explorer** (holdings at any rebalance date, allocation over time, which
+stocks drove the return) and a **rebalancing timeline** showing every decision with its trigger
+(schedule, drift, VIX) next to the VIX. It reads only the committed `results/` folder, so it
+runs right after cloning, without downloading any market data.
+
 ## How the evaluation stays honest
 
 * **Point-in-time universe**: stocks are chosen from the S&P 500 members *on that date*
@@ -144,6 +244,8 @@ Full tables, including both crises: [`results/foundation/metrics.md`](results/fo
   transaction costs, including the initial purchase.
 * **Locked test set**: 2020 onward is never used for tuning any model.
 * **Correct risk-free rate**: Sharpe and Sortino use excess returns over 1-month T-bills.
+* **Every trial counts**: all tuning trials are kept, and the Deflated Sharpe Ratio penalizes
+  the number of configurations tried.
 
 Details and known limitations: [`docs/methodology.md`](docs/methodology.md).
 
@@ -161,7 +263,10 @@ pfopt download --config configs/baselines.yaml   # ~3 min, free public data
 pfopt backtest --config configs/baselines.yaml   # ~3 min on a laptop CPU
 pfopt backtest --config configs/deep.yaml        # ~10 min on a GTX 1650
 pfopt backtest --config configs/foundation.yaml  # ~55 min on a GTX 1650 (LoRA fine-tuning)
-pytest                                           # 45 tests, synthetic data, no network
+pfopt backtest --config configs/rebalancing.yaml # ~7 min, GA rebalancing variants
+pfopt analyze                                    # significance + crisis tables, all experiments
+streamlit run app/dashboard.py                   # needs pip install -e ".[dashboard]"
+pytest                                           # 55 tests, synthetic data, no network
 ```
 
 Results (tables, figures, weights) are written to `results/<experiment>/`. A new strategy is
@@ -177,8 +282,11 @@ src/pfopt/
   strategies/       classic optimizers, genetic algorithm, deep learning, forecast + optimize
   forecasters.py    historical mean, momentum, Chronos-2 (zero-shot / LoRA fine-tuned)
   analysis.py       forecast skill (rank information coefficient)
+  stats.py          bootstrap Sharpe CIs, Probabilistic / Deflated Sharpe Ratio, drawdown episodes
+  robustness.py     cross-experiment significance and crisis analysis
   reporting.py      metric tables and figures
-  cli.py            `pfopt download` / `pfopt backtest`
+  cli.py            `pfopt download` / `backtest` / `analyze`
+app/                Streamlit dashboard
 tests/              unit tests (engine timing, costs, metrics, constraints)
 docs/               methodology and limitations
 legacy/             the original course notebook this project grew from
@@ -193,8 +301,10 @@ legacy/             the original course notebook this project grew from
       tuned on 2010–2019 only, with every tried configuration logged
 - [x] **Phase 3**: time-series foundation model (Chronos-2) forecasts → optimizer, zero-shot vs
       LoRA fine-tuned, with forecast skill measured by rank IC
-- [ ] **Phase 4**: statistical significance (bootstrap Sharpe CIs, Deflated Sharpe Ratio),
-      crisis analysis, interactive Streamlit dashboard
+- [x] **Phase 4**: event-driven and cost-aware rebalancing, return attribution, statistical
+      significance (bootstrap Sharpe CIs, Deflated Sharpe Ratio), crisis analysis, Streamlit
+      dashboard
+- [ ] Next ideas: CRSP data (no survivorship bias), sector constraints, more test years
 
 ## Data sources
 

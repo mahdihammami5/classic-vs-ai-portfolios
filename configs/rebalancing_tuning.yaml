@@ -1,0 +1,77 @@
+# Phase 4a: when should the GA trade? Tuned on the development period ONLY (2010-2019).
+#
+# Three families of ideas, each a small grid:
+#   C = cost-aware fitness  : GA fitness = Sharpe - lambda x one-way turnover from holdings
+#   B = no-trade band       : re-optimize monthly, trade only if the new portfolio is at least
+#                             `band` (one-way) away from what is held
+#   E = event-driven        : quarterly schedule + weekly checks; extra rebalance when holdings
+#                             drift > `drift` from target or the VIX crosses 30 (either way)
+#
+# Selection rule, fixed before running: in each family pick the trial with the highest
+# development Sharpe (ties -> lower turnover). Phase 4b then runs, on the full period:
+# GA monthly, the three family winners, and "Combined" = winning lambda + winning event policy.
+experiment: rebalancing_tuning
+seed: 42
+
+data:
+  dir: data
+  price_start: "2005-01-01"
+  price_end: null
+  benchmark: SPY
+
+backtest:
+  start: "2010-01-01"
+  end: "2019-12-31"        # test period stays locked
+  rebalance: M
+  lookback: 252
+  cost_bps: 10
+  universe_size: 100
+  universe_refresh: Y
+  liquidity_window: 63
+
+periods:
+  development: ["2010-01-01", "2019-12-31"]
+
+strategies:
+  - name: GA-Monthly
+    type: genetic_woc
+    params: {woc: false, max_weight: 0.10}
+
+  - name: C-lambda0.5
+    type: genetic_woc
+    params: {woc: false, max_weight: 0.10, turnover_penalty: 0.5}
+  - name: C-lambda1
+    type: genetic_woc
+    params: {woc: false, max_weight: 0.10, turnover_penalty: 1.0}
+  - name: C-lambda2
+    type: genetic_woc
+    params: {woc: false, max_weight: 0.10, turnover_penalty: 2.0}
+  - name: C-lambda4
+    type: genetic_woc
+    params: {woc: false, max_weight: 0.10, turnover_penalty: 4.0}
+
+  - name: B-band0.10
+    type: genetic_woc
+    params: {woc: false, max_weight: 0.10}
+    rebalance: {band: 0.10}
+  - name: B-band0.20
+    type: genetic_woc
+    params: {woc: false, max_weight: 0.10}
+    rebalance: {band: 0.20}
+  - name: B-band0.30
+    type: genetic_woc
+    params: {woc: false, max_weight: 0.10}
+    rebalance: {band: 0.30}
+
+  - name: E-drift0.10
+    type: genetic_woc
+    params: {woc: false, max_weight: 0.10}
+    rebalance: {schedule: Q, check: W, drift: 0.10, min_gap: 5}
+  - name: E-drift0.10-vix30
+    type: genetic_woc
+    params: {woc: false, max_weight: 0.10}
+    rebalance: {schedule: Q, check: W, drift: 0.10, vix_level: 30, min_gap: 5}
+  - name: E-drift0.20-vix30
+    type: genetic_woc
+    params: {woc: false, max_weight: 0.10}
+    rebalance: {schedule: Q, check: W, drift: 0.20, vix_level: 30, min_gap: 5}

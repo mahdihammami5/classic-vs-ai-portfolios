@@ -1,0 +1,228 @@
+{
+  "pfopt_version": "0.1.0",
+  "config": {
+    "experiment": "rebalancing_tuning",
+    "data": {
+      "dir": "data",
+      "price_start": "2005-01-01",
+      "price_end": null,
+      "benchmark": "SPY"
+    },
+    "backtest": {
+      "start": "2010-01-01",
+      "end": "2019-12-31",
+      "rebalance": "M",
+      "lookback": 252,
+      "cost_bps": 10,
+      "universe_size": 100,
+      "universe_refresh": "Y",
+      "liquidity_window": 63
+    },
+    "periods": {
+      "development": [
+        "2010-01-01",
+        "2019-12-31"
+      ]
+    },
+    "strategies": [
+      {
+        "name": "GA-Monthly",
+        "type": "genetic_woc",
+        "params": {
+          "woc": false,
+          "max_weight": 0.1
+        },
+        "rebalance": {
+          "schedule": null,
+          "check": null,
+          "drift": null,
+          "vix_level": null,
+          "band": null,
+          "min_gap": 0
+        }
+      },
+      {
+        "name": "C-lambda0.5",
+        "type": "genetic_woc",
+        "params": {
+          "woc": false,
+          "max_weight": 0.1,
+          "turnover_penalty": 0.5
+        },
+        "rebalance": {
+          "schedule": null,
+          "check": null,
+          "drift": null,
+          "vix_level": null,
+          "band": null,
+          "min_gap": 0
+        }
+      },
+      {
+        "name": "C-lambda1",
+        "type": "genetic_woc",
+        "params": {
+          "woc": false,
+          "max_weight": 0.1,
+          "turnover_penalty": 1.0
+        },
+        "rebalance": {
+          "schedule": null,
+          "check": null,
+          "drift": null,
+          "vix_level": null,
+          "band": null,
+          "min_gap": 0
+        }
+      },
+      {
+        "name": "C-lambda2",
+        "type": "genetic_woc",
+        "params": {
+          "woc": false,
+          "max_weight": 0.1,
+          "turnover_penalty": 2.0
+        },
+        "rebalance": {
+          "schedule": null,
+          "check": null,
+          "drift": null,
+          "vix_level": null,
+          "band": null,
+          "min_gap": 0
+        }
+      },
+      {
+        "name": "C-lambda4",
+        "type": "genetic_woc",
+        "params": {
+          "woc": false,
+          "max_weight": 0.1,
+          "turnover_penalty": 4.0
+        },
+        "rebalance": {
+          "schedule": null,
+          "check": null,
+          "drift": null,
+          "vix_level": null,
+          "band": null,
+          "min_gap": 0
+        }
+      },
+      {
+        "name": "B-band0.10",
+        "type": "genetic_woc",
+        "params": {
+          "woc": false,
+          "max_weight": 0.1
+        },
+        "rebalance": {
+          "schedule": null,
+          "check": null,
+          "drift": null,
+          "vix_level": null,
+          "band": 0.1,
+          "min_gap": 0
+        }
+      },
+      {
+        "name": "B-band0.20",
+        "type": "genetic_woc",
+        "params": {
+          "woc": false,
+          "max_weight": 0.1
+        },
+        "rebalance": {
+          "schedule": null,
+          "check": null,
+          "drift": null,
+          "vix_level": null,
+          "band": 0.2,
+          "min_gap": 0
+        }
+      },
+      {
+        "name": "B-band0.30",
+        "type": "genetic_woc",
+        "params": {
+          "woc": false,
+          "max_weight": 0.1
+        },
+        "rebalance": {
+          "schedule": null,
+          "check": null,
+          "drift": null,
+          "vix_level": null,
+          "band": 0.3,
+          "min_gap": 0
+        }
+      },
+      {
+        "name": "E-drift0.10",
+        "type": "genetic_woc",
+        "params": {
+          "woc": false,
+          "max_weight": 0.1
+        },
+        "rebalance": {
+          "schedule": "Q",
+          "check": "W",
+          "drift": 0.1,
+          "vix_level": null,
+          "band": null,
+          "min_gap": 5
+        }
+      },
+      {
+        "name": "E-drift0.10-vix30",
+        "type": "genetic_woc",
+        "params": {
+          "woc": false,
+          "max_weight": 0.1
+        },
+        "rebalance": {
+          "schedule": "Q",
+          "check": "W",
+          "drift": 0.1,
+          "vix_level": 30,
+          "band": null,
+          "min_gap": 5
+        }
+      },
+      {
+        "name": "E-drift0.20-vix30",
+        "type": "genetic_woc",
+        "params": {
+          "woc": false,
+          "max_weight": 0.1
+        },
+        "rebalance": {
+          "schedule": "Q",
+          "check": "W",
+          "drift": 0.2,
+          "vix_level": 30,
+          "band": null,
+          "min_gap": 5
+        }
+      }
+    ],
+    "output_dir": "results",
+    "seed": 42
+  },
+  "data_first_date": "2005-01-04 00:00:00",
+  "data_last_date": "2026-11-10 00:00:00",
+  "runtime_s": {
+    "GA-Monthly": 49.37,
+    "C-lambda0.5": 51.9,
+    "C-lambda1": 59.22,
+    "C-lambda2": 60.98,
+    "C-lambda4": 49.94,
+    "B-band0.10": 51.07,
+    "B-band0.20": 45.54,
+    "B-band0.30": 47.2,
+    "E-drift0.10": 16.97,
+    "E-drift0.10-vix30": 19.84,
+    "E-drift0.20-vix30": 19.65
+  },
+  "strategy_meta": {}
+}

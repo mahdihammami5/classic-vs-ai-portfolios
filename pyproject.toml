@@ -27,6 +27,7 @@ dev = ["pytest>=7.4", "ruff>=0.5"]
 # GPU users: install torch from https://pytorch.org first to get the CUDA build.
 deep = ["torch>=2.2"]
 foundation = ["torch>=2.2", "chronos-forecasting>=2.3", "peft>=0.13"]
+dashboard = ["streamlit>=1.40", "plotly>=5.24"]
 
 [project.scripts]
 pfopt = "pfopt.cli:main"

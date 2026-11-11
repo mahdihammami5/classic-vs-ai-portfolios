@@ -1,0 +1,59 @@
+# Phase 4b: smarter rebalancing for the GA, full period (2010 ->), test period opened once.
+# Settings were picked on 2010-2019 only by the rule in configs/rebalancing_tuning.yaml:
+#   cost-aware fitness : lambda = 4      (dev Sharpe 1.06 vs 0.89 monthly; largest in grid)
+#   no-trade band      : band = 0.20     (dev Sharpe 0.93)
+#   event-driven       : quarterly + weekly checks, drift 0.10, VIX 30 crossings (dev 0.94;
+#                        the drift trigger never fired in 2010-2019, the VIX trigger did)
+#   Combined           : lambda 4 + the event-driven policy (fixed in advance, not tuned)
+experiment: rebalancing
+seed: 42
+
+data:
+  dir: data
+  price_start: "2005-01-01"
+  price_end: null
+  benchmark: SPY
+
+backtest:
+  start: "2010-01-01"
+  end: null
+  rebalance: M
+  lookback: 252
+  cost_bps: 10
+  universe_size: 100
+  universe_refresh: Y
+  liquidity_window: 63
+
+periods:
+  full:        ["2010-01-01", null]
+  development: ["2010-01-01", "2019-12-31"]
+  test:        ["2020-01-01", null]
+  covid_crash: ["2020-02-19", "2020-03-23"]
+  bear_2022:   ["2022-01-03", "2022-10-12"]
+
+strategies:
+  - name: GA
+    type: genetic_woc
+    params: {woc: false, max_weight: 0.10}
+  - name: GA-CostAware
+    type: genetic_woc
+    params: {woc: false, max_weight: 0.10, turnover_penalty: 4.0}
+  - name: GA-Band
+    type: genetic_woc
+    params: {woc: false, max_weight: 0.10}
+    rebalance: {band: 0.20}
+  - name: GA-EventVIX
+    type: genetic_woc
+    params: {woc: false, max_weight: 0.10}
+    rebalance: {schedule: Q, check: W, drift: 0.10, vix_level: 30, min_gap: 5}
+  - name: GA-Combined
+    type: genetic_woc
+    params: {woc: false, max_weight: 0.10, turnover_penalty: 4.0}
+    rebalance: {schedule: Q, check: W, drift: 0.10, vix_level: 30, min_gap: 5}
+  - name: GA+WoC
+    type: genetic_woc
+    params: {woc: true, crowd_size: 10, max_weight: 0.10}
+  - name: GA+WoC-Combined
+    type: genetic_woc
+    params: {woc: true, crowd_size: 10, max_weight: 0.10, turnover_penalty: 4.0}
+    rebalance: {schedule: Q, check: W, drift: 0.10, vix_level: 30, min_gap: 5}

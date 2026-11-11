@@ -44,18 +44,42 @@
       {
         "name": "EqualWeight",
         "type": "equal_weight",
-        "params": {}
+        "params": {},
+        "rebalance": {
+          "schedule": null,
+          "check": null,
+          "drift": null,
+          "vix_level": null,
+          "band": null,
+          "min_gap": 0
+        }
       },
       {
         "name": "InverseVol",
         "type": "inverse_volatility",
-        "params": {}
+        "params": {},
+        "rebalance": {
+          "schedule": null,
+          "check": null,
+          "drift": null,
+          "vix_level": null,
+          "band": null,
+          "min_gap": 0
+        }
       },
       {
         "name": "MinVariance",
         "type": "min_variance",
         "params": {
           "max_weight": 0.1
+        },
+        "rebalance": {
+          "schedule": null,
+          "check": null,
+          "drift": null,
+          "vix_level": null,
+          "band": null,
+          "min_gap": 0
         }
       },
       {
@@ -65,12 +89,28 @@
           "risk_aversion": 5.0,
           "mean_shrinkage": 0.5,
           "max_weight": 0.1
+        },
+        "rebalance": {
+          "schedule": null,
+          "check": null,
+          "drift": null,
+          "vix_level": null,
+          "band": null,
+          "min_gap": 0
         }
       },
       {
         "name": "RiskParity",
         "type": "risk_parity",
-        "params": {}
+        "params": {},
+        "rebalance": {
+          "schedule": null,
+          "check": null,
+          "drift": null,
+          "vix_level": null,
+          "band": null,
+          "min_gap": 0
+        }
       },
       {
         "name": "GA",
@@ -78,6 +118,14 @@
         "params": {
           "woc": false,
           "max_weight": 0.1
+        },
+        "rebalance": {
+          "schedule": null,
+          "check": null,
+          "drift": null,
+          "vix_level": null,
+          "band": null,
+          "min_gap": 0
         }
       },
       {
@@ -87,6 +135,14 @@
           "woc": true,
           "crowd_size": 10,
           "max_weight": 0.1
+        },
+        "rebalance": {
+          "schedule": null,
+          "check": null,
+          "drift": null,
+          "vix_level": null,
+          "band": null,
+          "min_gap": 0
         }
       }
     ],
@@ -96,12 +152,13 @@
   "data_first_date": "2005-01-04 00:00:00",
   "data_last_date": "2026-11-10 00:00:00",
   "runtime_s": {
-    "EqualWeight": 1.68,
-    "InverseVol": 1.89,
-    "MinVariance": 5.14,
-    "MeanVariance": 5.36,
-    "RiskParity": 5.92,
-    "GA": 73.28,
-    "GA+WoC": 73.94
-  }
+    "EqualWeight": 2.16,
+    "InverseVol": 2.41,
+    "MinVariance": 5.79,
+    "MeanVariance": 6.05,
+    "RiskParity": 6.52,
+    "GA": 77.03,
+    "GA+WoC": 75.41
+  },
+  "strategy_meta": {}
 }

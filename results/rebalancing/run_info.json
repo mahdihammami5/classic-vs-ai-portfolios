@@ -1,0 +1,177 @@
+{
+  "pfopt_version": "0.1.0",
+  "config": {
+    "experiment": "rebalancing",
+    "data": {
+      "dir": "data",
+      "price_start": "2005-01-01",
+      "price_end": null,
+      "benchmark": "SPY"
+    },
+    "backtest": {
+      "start": "2010-01-01",
+      "end": null,
+      "rebalance": "M",
+      "lookback": 252,
+      "cost_bps": 10,
+      "universe_size": 100,
+      "universe_refresh": "Y",
+      "liquidity_window": 63
+    },
+    "periods": {
+      "full": [
+        "2010-01-01",
+        null
+      ],
+      "development": [
+        "2010-01-01",
+        "2019-12-31"
+      ],
+      "test": [
+        "2020-01-01",
+        null
+      ],
+      "covid_crash": [
+        "2020-02-19",
+        "2020-03-23"
+      ],
+      "bear_2022": [
+        "2022-01-03",
+        "2022-10-12"
+      ]
+    },
+    "strategies": [
+      {
+        "name": "GA",
+        "type": "genetic_woc",
+        "params": {
+          "woc": false,
+          "max_weight": 0.1
+        },
+        "rebalance": {
+          "schedule": null,
+          "check": null,
+          "drift": null,
+          "vix_level": null,
+          "band": null,
+          "min_gap": 0
+        }
+      },
+      {
+        "name": "GA-CostAware",
+        "type": "genetic_woc",
+        "params": {
+          "woc": false,
+          "max_weight": 0.1,
+          "turnover_penalty": 4.0
+        },
+        "rebalance": {
+          "schedule": null,
+          "check": null,
+          "drift": null,
+          "vix_level": null,
+          "band": null,
+          "min_gap": 0
+        }
+      },
+      {
+        "name": "GA-Band",
+        "type": "genetic_woc",
+        "params": {
+          "woc": false,
+          "max_weight": 0.1
+        },
+        "rebalance": {
+          "schedule": null,
+          "check": null,
+          "drift": null,
+          "vix_level": null,
+          "band": 0.2,
+          "min_gap": 0
+        }
+      },
+      {
+        "name": "GA-EventVIX",
+        "type": "genetic_woc",
+        "params": {
+          "woc": false,
+          "max_weight": 0.1
+        },
+        "rebalance": {
+          "schedule": "Q",
+          "check": "W",
+          "drift": 0.1,
+          "vix_level": 30,
+          "band": null,
+          "min_gap": 5
+        }
+      },
+      {
+        "name": "GA-Combined",
+        "type": "genetic_woc",
+        "params": {
+          "woc": false,
+          "max_weight": 0.1,
+          "turnover_penalty": 4.0
+        },
+        "rebalance": {
+          "schedule": "Q",
+          "check": "W",
+          "drift": 0.1,
+          "vix_level": 30,
+          "band": null,
+          "min_gap": 5
+        }
+      },
+      {
+        "name": "GA+WoC",
+        "type": "genetic_woc",
+        "params": {
+          "woc": true,
+          "crowd_size": 10,
+          "max_weight": 0.1
+        },
+        "rebalance": {
+          "schedule": null,
+          "check": null,
+          "drift": null,
+          "vix_level": null,
+          "band": null,
+          "min_gap": 0
+        }
+      },
+      {
+        "name": "GA+WoC-Combined",
+        "type": "genetic_woc",
+        "params": {
+          "woc": true,
+          "crowd_size": 10,
+          "max_weight": 0.1,
+          "turnover_penalty": 4.0
+        },
+        "rebalance": {
+          "schedule": "Q",
+          "check": "W",
+          "drift": 0.1,
+          "vix_level": 30,
+          "band": null,
+          "min_gap": 5
+        }
+      }
+    ],
+    "output_dir": "results",
+    "seed": 42
+  },
+  "data_first_date": "2005-01-04 00:00:00",
+  "data_last_date": "2026-11-10 00:00:00",
+  "runtime_s": {
+    "GA": 76.58,
+    "GA-CostAware": 74.88,
+    "GA-Band": 75.85,
+    "GA-EventVIX": 39.8,
+    "GA-Combined": 40.17,
+    "GA+WoC": 74.89,
+    "GA+WoC-Combined": 41.12
+  },
+  "strategy_meta": {}
+}
