@@ -1,0 +1,107 @@
+{
+  "pfopt_version": "0.1.0",
+  "config": {
+    "experiment": "baselines",
+    "data": {
+      "dir": "data",
+      "price_start": "2005-01-01",
+      "price_end": null,
+      "benchmark": "SPY"
+    },
+    "backtest": {
+      "start": "2010-01-01",
+      "end": null,
+      "rebalance": "M",
+      "lookback": 252,
+      "cost_bps": 10,
+      "universe_size": 100,
+      "universe_refresh": "Y",
+      "liquidity_window": 63
+    },
+    "periods": {
+      "full": [
+        "2010-01-01",
+        null
+      ],
+      "development": [
+        "2010-01-01",
+        "2019-12-31"
+      ],
+      "test": [
+        "2020-01-01",
+        null
+      ],
+      "covid_crash": [
+        "2020-02-19",
+        "2020-03-23"
+      ],
+      "bear_2022": [
+        "2022-01-03",
+        "2022-10-12"
+      ]
+    },
+    "strategies": [
+      {
+        "name": "EqualWeight",
+        "type": "equal_weight",
+        "params": {}
+      },
+      {
+        "name": "InverseVol",
+        "type": "inverse_volatility",
+        "params": {}
+      },
+      {
+        "name": "MinVariance",
+        "type": "min_variance",
+        "params": {
+          "max_weight": 0.1
+        }
+      },
+      {
+        "name": "MeanVariance",
+        "type": "mean_variance",
+        "params": {
+          "risk_aversion": 5.0,
+          "mean_shrinkage": 0.5,
+          "max_weight": 0.1
+        }
+      },
+      {
+        "name": "RiskParity",
+        "type": "risk_parity",
+        "params": {}
+      },
+      {
+        "name": "GA",
+        "type": "genetic_woc",
+        "params": {
+          "woc": false,
+          "max_weight": 0.1
+        }
+      },
+      {
+        "name": "GA+WoC",
+        "type": "genetic_woc",
+        "params": {
+          "woc": true,
+          "crowd_size": 10,
+          "max_weight": 0.1
+        }
+      }
+    ],
+    "output_dir": "results",
+    "seed": 42
+  },
+  "data_first_date": "2005-01-04 00:00:00",
+  "data_last_date": "2026-11-10 00:00:00",
+  "runtime_s": {
+    "EqualWeight": 1.68,
+    "InverseVol": 1.89,
+    "MinVariance": 5.14,
+    "MeanVariance": 5.36,
+    "RiskParity": 5.92,
+    "GA": 73.28,
+    "GA+WoC": 73.94
+  }
+}
