@@ -81,16 +81,33 @@ class MeanVariance(Strategy):
         self.max_weight = max_weight
 
     def allocate(self, hist, prev, rng):
-        n = hist.shape[1]
         mu_hat = hist.mean().to_numpy() * TRADING_DAYS
-        mu = (1 - self.mean_shrinkage) * mu_hat + self.mean_shrinkage * mu_hat.mean()
-        L = _cholesky(shrunk_covariance(hist))
-        w = cp.Variable(n)
-        utility = mu @ w - 0.5 * self.risk_aversion * cp.sum_squares(L.T @ w)
-        prob = cp.Problem(cp.Maximize(utility), [cp.sum(w) == 1, w >= 0, w <= self.max_weight])
-        sol = _solve(prob, w, self.name)
-        sol = np.full(n, 1.0 / n) if sol is None else cap_weights(sol, self.max_weight)
-        return pd.Series(sol, index=hist.columns)
+        w = solve_mean_variance(mu_hat, shrunk_covariance(hist), self.risk_aversion,
+                                self.mean_shrinkage, self.max_weight, self.name)
+        return pd.Series(w, index=hist.columns)
+
+
+def solve_mean_variance(
+    mu: np.ndarray,
+    sigma: np.ndarray,
+    risk_aversion: float,
+    mean_shrinkage: float,
+    max_weight: float,
+    name: str = "mean_variance",
+) -> np.ndarray:
+    """Long-only, capped  max mu'w - (gamma/2) w'Sigma w  with mu shrunk to its average.
+
+    ``mu`` and ``sigma`` are annualized. Shared by every predict-then-optimize strategy so
+    that only the source of expected returns differs between them.
+    """
+    n = len(mu)
+    mu = (1 - mean_shrinkage) * mu + mean_shrinkage * mu.mean()
+    L = _cholesky(sigma)
+    w = cp.Variable(n)
+    utility = mu @ w - 0.5 * risk_aversion * cp.sum_squares(L.T @ w)
+    prob = cp.Problem(cp.Maximize(utility), [cp.sum(w) == 1, w >= 0, w <= max_weight])
+    sol = _solve(prob, w, name)
+    return np.full(n, 1.0 / n) if sol is None else cap_weights(sol, max_weight)
 
 
 class RiskParity(Strategy):

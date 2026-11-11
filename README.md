@@ -100,6 +100,40 @@ the locked test set is there to expose. The turnover penalty, however, works as 
 cuts trading by two thirds for a small development cost, which is the most useful lever if
 costs are higher than 10 bps. Full test tables: [`results/deep_v2/metrics.md`](results/deep_v2/metrics.md).
 
+## Phase 3: do time-series foundation models help?
+
+[Chronos-2](https://huggingface.co/amazon/chronos-2) (Amazon, 2025, 120M parameters) forecasts
+each stock's price 21 trading days ahead from its last 512 days. The design is a clean
+**predict-then-optimize ablation**: every strategy uses the same mean-variance optimizer,
+covariance, cap, costs and mean shrinkage; **only the expected-return forecaster changes**.
+Variants: zero-shot, zero-shot with cross-learning (stocks in a batch share information), and a
+**LoRA adapter re-trained every January** on the universe's past prices (18 fine-tunes, ~2.5 min
+each on a GTX 1650). Forecast skill is measured directly with the monthly **rank information
+coefficient** (IC: rank correlation between forecast and realized next-month return).
+
+| Forecaster → same optimizer | Mean IC dev (t-stat) | Mean IC test (t-stat) | Test Sharpe | Turnover / yr |
+|---|---:|---:|---:|---:|
+| Historical mean (= phase-1 Markowitz) | 0.027 (1.4) | 0.007 (0.2) | **0.69** | 354% |
+| 12-1 momentum | 0.025 (1.2) | -0.004 (-0.1) | 0.66 | 382% |
+| Chronos-2 zero-shot | 0.008 (0.6) | **0.022** (1.1) | 0.41 | 817% |
+| Chronos-2 zero-shot, cross-learning | -0.010 (-0.7) | -0.016 (-0.7) | 0.13 | 861% |
+| Chronos-2 + yearly LoRA fine-tuning | **0.029 (2.4)** | 0.017 (0.8) | 0.55 | 871% |
+| SPY (benchmark) | | | 0.64 | – |
+
+What this shows:
+
+* **Fine-tuning helps the foundation model.** The LoRA version has the most consistent ranking
+  skill (IC t-stat 2.4 in development, the only one above 2) and beats zero-shot on Sharpe.
+* **Cross-learning hurts**: letting stocks share information produces *negative* skill.
+* **Better forecasts did not mean better portfolios.** Chronos forecasts are unstable from month
+  to month (rank autocorrelation 0.26–0.43, vs 0.90 for the historical mean), so the optimizer
+  turns over ~8–9x the portfolio per year. At 10 bps that costs ~1.7% a year and adds noise, which
+  erases a small IC edge. Forecast smoothing or a turnover-aware optimizer would be the next step.
+* **Caveat on look-ahead**: a model released in 2025 may have seen market data from the backtest
+  period during pretraining, a risk shared by all foundation models (and LLMs).
+
+Full tables, including both crises: [`results/foundation/metrics.md`](results/foundation/metrics.md).
+
 ## How the evaluation stays honest
 
 * **Point-in-time universe**: stocks are chosen from the S&P 500 members *on that date*
@@ -119,12 +153,15 @@ Details and known limitations: [`docs/methodology.md`](docs/methodology.md).
 python -m venv .venv
 .venv\Scripts\activate          # Windows  (Linux/macOS: source .venv/bin/activate)
 pip install -e ".[dev]"
-# optional, for the deep learning models (GPU build: see pytorch.org)
+# optional, for the deep learning and foundation models (GPU build: see pytorch.org)
 pip install torch --index-url https://download.pytorch.org/whl/cu126
+pip install -e ".[foundation]"
 
 pfopt download --config configs/baselines.yaml   # ~3 min, free public data
 pfopt backtest --config configs/baselines.yaml   # ~3 min on a laptop CPU
-pytest                                           # 36 tests, synthetic data, no network
+pfopt backtest --config configs/deep.yaml        # ~10 min on a GTX 1650
+pfopt backtest --config configs/foundation.yaml  # ~55 min on a GTX 1650 (LoRA fine-tuning)
+pytest                                           # 45 tests, synthetic data, no network
 ```
 
 Results (tables, figures, weights) are written to `results/<experiment>/`. A new strategy is
@@ -137,7 +174,9 @@ configs/            experiment definitions (YAML)
 src/pfopt/
   data/             downloaders, point-in-time universe, MarketData loader
   backtest/         walk-forward engine and performance metrics
-  strategies/       classic optimizers, genetic algorithm, deep learning (+ registry)
+  strategies/       classic optimizers, genetic algorithm, deep learning, forecast + optimize
+  forecasters.py    historical mean, momentum, Chronos-2 (zero-shot / LoRA fine-tuned)
+  analysis.py       forecast skill (rank information coefficient)
   reporting.py      metric tables and figures
   cli.py            `pfopt download` / `pfopt backtest`
 tests/              unit tests (engine timing, costs, metrics, constraints)
@@ -152,7 +191,8 @@ legacy/             the original course notebook this project grew from
       trained directly on a Sharpe/CVaR objective, following Fernandes & Desell, 2026)
 - [x] **Phase 2b**: richer inputs (momentum, reversal, volatility, beta, VIX) and a turnover-aware loss,
       tuned on 2010–2019 only, with every tried configuration logged
-- [ ] **Phase 3**: time-series foundation model (Chronos) forecasts → optimizer, zero-shot vs fine-tuned
+- [x] **Phase 3**: time-series foundation model (Chronos-2) forecasts → optimizer, zero-shot vs
+      LoRA fine-tuned, with forecast skill measured by rank IC
 - [ ] **Phase 4**: statistical significance (bootstrap Sharpe CIs, Deflated Sharpe Ratio),
       crisis analysis, interactive Streamlit dashboard
 

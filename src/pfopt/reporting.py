@@ -11,6 +11,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import pandas as pd  # noqa: E402
 
+from pfopt.analysis import information_coefficients, summarize_ic  # noqa: E402
 from pfopt.backtest.engine import BacktestResult  # noqa: E402
 from pfopt.backtest.metrics import drawdown_series, summarize  # noqa: E402
 from pfopt.data.market import MarketData  # noqa: E402
@@ -120,6 +121,37 @@ def plot_drawdowns(
     plt.close(fig)
 
 
+def forecast_skill(
+    results: list[BacktestResult],
+    data: MarketData,
+    periods: dict[str, tuple[str | None, str | None]],
+    out_dir: Path,
+    min_dates: int = 12,
+) -> pd.DataFrame | None:
+    """Rank IC per forecasting strategy and period; saves the raw forecasts too."""
+    rows = []
+    for res in results:
+        preds = res.meta.pop("predictions", None)
+        if preds is None or preds.empty:
+            continue
+        preds.to_parquet(out_dir / f"forecasts_{res.name}.parquet")
+        ic = information_coefficients(preds, data.returns, res.meta["horizon"])
+        for period, (start, end) in periods.items():
+            stats = summarize_ic(_slice(ic, start, end))
+            if stats["n_dates"] >= min_dates:
+                rows.append({"period": period, "strategy": res.name, **stats})
+    return pd.DataFrame(rows).set_index(["period", "strategy"]) if rows else None
+
+
+def ic_markdown(table: pd.DataFrame) -> str:
+    lines = ["| Period | Forecaster | Mean IC | IC t-stat | IC > 0 | Months |",
+             "|---|---|---:|---:|---:|---:|"]
+    for (period, name), row in table.iterrows():
+        lines.append(f"| {period} | {name} | {row.mean_ic:.3f} | {row.t_stat:.2f} | "
+                     f"{row.hit_rate:.0%} | {int(row.n_dates)} |")
+    return "\n".join(lines)
+
+
 def save_run(
     out_dir: Path,
     results: list[BacktestResult],
@@ -131,6 +163,11 @@ def save_run(
     table = metrics_table(results, data, periods)
     table.to_csv(out_dir / "metrics.csv")
     md = [f"## {p}\n\n{to_markdown(table, p)}\n" for p in table.index.get_level_values(0).unique()]
+    ic_table = forecast_skill(results, data, periods, out_dir)
+    if ic_table is not None:
+        ic_table.to_csv(out_dir / "forecast_ic.csv")
+        md.append("## Forecast skill (rank IC vs realized next-period returns)\n\n"
+                  + ic_markdown(ic_table) + "\n")
     (out_dir / "metrics.md").write_text("\n".join(md), encoding="utf-8")
 
     pd.concat([r.returns for r in results], axis=1).to_parquet(out_dir / "returns.parquet")

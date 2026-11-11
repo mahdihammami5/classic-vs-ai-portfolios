@@ -18,7 +18,10 @@ def hist():
 
 @pytest.mark.parametrize("kind", sorted(REGISTRY))
 def test_every_strategy_returns_valid_long_only_weights(kind, hist):
-    params = {"generations": 20, "population": 30} if kind == "genetic_woc" else {}
+    params = {
+        "genetic_woc": {"generations": 20, "population": 30},
+        "forecast_mean_variance": {"forecaster": {"type": "momentum", "context": 252}},
+    }.get(kind, {})
     strat = build_strategy(StrategySpec(name=kind, type=kind, params=params))
     w = strat.allocate(hist, pd.Series(0.0, index=hist.columns), np.random.default_rng(0))
     w = w / w.sum()

@@ -11,9 +11,11 @@ from pfopt.strategies.classic import (
     MinVariance,
     RiskParity,
 )
+from pfopt.strategies.forecast import ForecastMeanVariance
 from pfopt.strategies.genetic import GeneticWoC
 
 REGISTRY: dict[str, type[Strategy]] = {
+    "forecast_mean_variance": ForecastMeanVariance,
     "equal_weight": EqualWeight,
     "inverse_volatility": InverseVolatility,
     "min_variance": MinVariance,

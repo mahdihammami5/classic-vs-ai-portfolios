@@ -1,0 +1,247 @@
+{
+  "pfopt_version": "0.1.0",
+  "config": {
+    "experiment": "foundation",
+    "data": {
+      "dir": "data",
+      "price_start": "2005-01-01",
+      "price_end": null,
+      "benchmark": "SPY"
+    },
+    "backtest": {
+      "start": "2010-01-01",
+      "end": null,
+      "rebalance": "M",
+      "lookback": 252,
+      "cost_bps": 10,
+      "universe_size": 100,
+      "universe_refresh": "Y",
+      "liquidity_window": 63
+    },
+    "periods": {
+      "full": [
+        "2010-01-01",
+        null
+      ],
+      "development": [
+        "2010-01-01",
+        "2019-12-31"
+      ],
+      "test": [
+        "2020-01-01",
+        null
+      ],
+      "covid_crash": [
+        "2020-02-19",
+        "2020-03-23"
+      ],
+      "bear_2022": [
+        "2022-01-03",
+        "2022-10-12"
+      ]
+    },
+    "strategies": [
+      {
+        "name": "EqualWeight",
+        "type": "equal_weight",
+        "params": {}
+      },
+      {
+        "name": "MV-HistoricalMean",
+        "type": "forecast_mean_variance",
+        "params": {
+          "forecaster": {
+            "type": "historical_mean",
+            "context": 252
+          }
+        }
+      },
+      {
+        "name": "MV-Momentum",
+        "type": "forecast_mean_variance",
+        "params": {
+          "forecaster": {
+            "type": "momentum",
+            "context": 252
+          }
+        }
+      },
+      {
+        "name": "MV-Chronos2-ZeroShot",
+        "type": "forecast_mean_variance",
+        "params": {
+          "forecaster": {
+            "type": "chronos2",
+            "context": 512
+          }
+        }
+      },
+      {
+        "name": "MV-Chronos2-ZeroShot-Cross",
+        "type": "forecast_mean_variance",
+        "params": {
+          "forecaster": {
+            "type": "chronos2",
+            "context": 512,
+            "cross_learning": true
+          }
+        }
+      },
+      {
+        "name": "MV-Chronos2-LoRA",
+        "type": "forecast_mean_variance",
+        "params": {
+          "forecaster": {
+            "type": "chronos2",
+            "context": 512,
+            "finetune": "lora",
+            "finetune_steps": 300
+          }
+        }
+      }
+    ],
+    "output_dir": "results",
+    "seed": 42
+  },
+  "data_first_date": "2005-01-04 00:00:00",
+  "data_last_date": "2026-11-10 00:00:00",
+  "runtime_s": {
+    "EqualWeight": 1.56,
+    "MV-HistoricalMean": 5.24,
+    "MV-Momentum": 5.49,
+    "MV-Chronos2-ZeroShot": 153.56,
+    "MV-Chronos2-ZeroShot-Cross": 147.29,
+    "MV-Chronos2-LoRA": 2798.27
+  },
+  "strategy_meta": {
+    "MV-HistoricalMean": {
+      "horizon": 21,
+      "forecaster_log": []
+    },
+    "MV-Momentum": {
+      "horizon": 21,
+      "forecaster_log": []
+    },
+    "MV-Chronos2-ZeroShot": {
+      "horizon": 21,
+      "forecaster_log": []
+    },
+    "MV-Chronos2-ZeroShot-Cross": {
+      "horizon": 21,
+      "forecaster_log": []
+    },
+    "MV-Chronos2-LoRA": {
+      "horizon": 21,
+      "forecaster_log": [
+        {
+          "trained_on": "2009-12-31",
+          "series": 100,
+          "steps": 300,
+          "seconds": 145.7
+        },
+        {
+          "trained_on": "2010-01-29",
+          "series": 100,
+          "steps": 300,
+          "seconds": 146.3
+        },
+        {
+          "trained_on": "2011-01-31",
+          "series": 100,
+          "steps": 300,
+          "seconds": 145.6
+        },
+        {
+          "trained_on": "2012-01-31",
+          "series": 100,
+          "steps": 300,
+          "seconds": 145.6
+        },
+        {
+          "trained_on": "2013-01-31",
+          "series": 100,
+          "steps": 300,
+          "seconds": 145.7
+        },
+        {
+          "trained_on": "2014-01-31",
+          "series": 100,
+          "steps": 300,
+          "seconds": 145.9
+        },
+        {
+          "trained_on": "2015-01-30",
+          "series": 100,
+          "steps": 300,
+          "seconds": 145.7
+        },
+        {
+          "trained_on": "2016-01-29",
+          "series": 100,
+          "steps": 300,
+          "seconds": 146.0
+        },
+        {
+          "trained_on": "2017-01-31",
+          "series": 100,
+          "steps": 300,
+          "seconds": 145.7
+        },
+        {
+          "trained_on": "2018-01-31",
+          "series": 100,
+          "steps": 300,
+          "seconds": 146.3
+        },
+        {
+          "trained_on": "2019-01-31",
+          "series": 100,
+          "steps": 300,
+          "seconds": 145.8
+        },
+        {
+          "trained_on": "2020-01-31",
+          "series": 100,
+          "steps": 300,
+          "seconds": 146.1
+        },
+        {
+          "trained_on": "2021-01-29",
+          "series": 100,
+          "steps": 300,
+          "seconds": 145.9
+        },
+        {
+          "trained_on": "2022-01-31",
+          "series": 100,
+          "steps": 300,
+          "seconds": 145.9
+        },
+        {
+          "trained_on": "2023-01-31",
+          "series": 100,
+          "steps": 300,
+          "seconds": 146.1
+        },
+        {
+          "trained_on": "2024-01-31",
+          "series": 100,
+          "steps": 300,
+          "seconds": 145.9
+        },
+        {
+          "trained_on": "2025-01-31",
+          "series": 100,
+          "steps": 300,
+          "seconds": 146.6
+        },
+        {
+          "trained_on": "2026-01-30",
+          "series": 100,
+          "steps": 300,
+          "seconds": 146.1
+        }
+      ]
+    }
+  }
+}

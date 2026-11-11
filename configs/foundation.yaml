@@ -1,0 +1,57 @@
+# Phase 3: do time-series foundation models produce better expected returns?
+# Predict-then-optimize ablation: every strategy uses the same mean-variance optimizer,
+# covariance, cap, costs and mean shrinkage; only the expected-return forecaster changes.
+# All variants were fixed before running and all are reported (no selection on results).
+experiment: foundation
+seed: 42
+
+data:
+  dir: data
+  price_start: "2005-01-01"
+  price_end: null
+  benchmark: SPY
+
+backtest:
+  start: "2010-01-01"
+  end: null
+  rebalance: M
+  lookback: 252
+  cost_bps: 10
+  universe_size: 100
+  universe_refresh: Y
+  liquidity_window: 63
+
+periods:
+  full:        ["2010-01-01", null]
+  development: ["2010-01-01", "2019-12-31"]
+  test:        ["2020-01-01", null]
+  covid_crash: ["2020-02-19", "2020-03-23"]
+  bear_2022:   ["2022-01-03", "2022-10-12"]
+
+strategies:
+  - name: EqualWeight
+    type: equal_weight
+  # Identical to the phase-1 Markowitz strategy (verified by a unit test).
+  - name: MV-HistoricalMean
+    type: forecast_mean_variance
+    params:
+      forecaster: {type: historical_mean, context: 252}
+  - name: MV-Momentum
+    type: forecast_mean_variance
+    params:
+      forecaster: {type: momentum, context: 252}
+  # Chronos-2, zero-shot: each stock forecast on its own.
+  - name: MV-Chronos2-ZeroShot
+    type: forecast_mean_variance
+    params:
+      forecaster: {type: chronos2, context: 512}
+  # Chronos-2, zero-shot with cross-learning: stocks in the batch share information.
+  - name: MV-Chronos2-ZeroShot-Cross
+    type: forecast_mean_variance
+    params:
+      forecaster: {type: chronos2, context: 512, cross_learning: true}
+  # Chronos-2 with a LoRA adapter re-trained every January on past prices of the universe.
+  - name: MV-Chronos2-LoRA
+    type: forecast_mean_variance
+    params:
+      forecaster: {type: chronos2, context: 512, finetune: lora, finetune_steps: 300}
