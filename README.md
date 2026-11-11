@@ -150,7 +150,7 @@ legacy/             the original course notebook this project grew from
 - [x] **Phase 1**: data pipeline, backtester, classic baselines, genetic algorithm + WoC
 - [x] **Phase 2**: end-to-end deep learning portfolio (attention-LSTM + cross-asset Transformer
       trained directly on a Sharpe/CVaR objective, following Fernandes & Desell, 2026)
-- [x] **Phase 2b**: richer inputs (momentum, VIX, sectors) and a turnover-aware loss,
+- [x] **Phase 2b**: richer inputs (momentum, reversal, volatility, beta, VIX) and a turnover-aware loss,
       tuned on 2010–2019 only, with every tried configuration logged
 - [ ] **Phase 3**: time-series foundation model (Chronos) forecasts → optimizer, zero-shot vs fine-tuned
 - [ ] **Phase 4**: statistical significance (bootstrap Sharpe CIs, Deflated Sharpe Ratio),
