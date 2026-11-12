@@ -3,6 +3,7 @@
 [![CI](https://github.com/mahdihammami5/classic-vs-ai-portfolios/actions/workflows/ci.yml/badge.svg)](https://github.com/mahdihammami5/classic-vs-ai-portfolios/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
+[![Live demo](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://classic-vs-ai-portfolios.streamlit.app/)
 
 **Do modern AI portfolio models actually beat classic methods once you add realistic
 transaction costs and test them fairly?**
@@ -15,7 +16,8 @@ crash and the 2022 bear market, and then asks whether any winner is **better tha
 **Short answer:** after costs, a genetic algorithm had the best test Sharpe (0.82 vs 0.64 for
 SPY), the deep learning and foundation-model portfolios did not beat the market, and with ~7
 years of test data **no strategy's edge over SPY is statistically significant** once you
-account for the 35 configurations tried. An interactive dashboard lets you explore every run.
+account for the 35 configurations tried. An [interactive dashboard](https://classic-vs-ai-portfolios.streamlit.app/)
+lets you explore every run.
 
 **Built with:** Python, pandas, NumPy, cvxpy, PyTorch (LSTM + Transformer), Hugging Face
 Chronos-2 with LoRA fine-tuning (PEFT), statistical testing (block bootstrap, Deflated Sharpe
@@ -240,6 +242,8 @@ Minimum variance is the most reliable crisis hedge (better than SPY in all six e
 defensive deep learning portfolio comes second: they lose in rallies what they save in crashes.
 
 ### Interactive dashboard
+
+**Live: [classic-vs-ai-portfolios.streamlit.app](https://classic-vs-ai-portfolios.streamlit.app/)**. To run it locally:
 
 ```bash
 pip install -e ".[dashboard]"
