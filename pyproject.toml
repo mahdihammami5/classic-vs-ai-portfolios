@@ -4,9 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pfopt"
-version = "0.1.0"
+version = "1.0.0"
 description = "Classic vs AI portfolio optimization on the S&P 500: a fair, cost-aware, walk-forward benchmark."
 readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Mahdi Hammami" }]
 requires-python = ">=3.10"
 dependencies = [
     "numpy>=1.26",

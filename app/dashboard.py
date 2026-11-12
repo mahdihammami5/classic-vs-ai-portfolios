@@ -30,7 +30,7 @@ from pfopt.robustness import collect_returns
 RESULTS = ROOT / "results"
 ANALYSIS = RESULTS / "analysis"
 BENCH = "SPY"
-BENCH_COLOR = "#8c8c8c"  # mid gray: visible on light and dark backgrounds
+BENCH_COLOR = "black"
 BENCH_LINE = {"dash": "dash", "color": BENCH_COLOR, "width": 2.5}
 DEFAULTS = ["EqualWeight", "MeanVariance", "GA", "GA-Combined", "DeepPortfolio",
             "MV-Chronos2-LoRA"]

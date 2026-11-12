@@ -1,5 +1,9 @@
 # Classic vs AI Portfolios on the S&P 500
 
+[![CI](https://github.com/mahdihammami5/classic-vs-ai-portfolios/actions/workflows/ci.yml/badge.svg)](https://github.com/mahdihammami5/classic-vs-ai-portfolios/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
+
 **Do modern AI portfolio models actually beat classic methods once you add realistic
 transaction costs and test them fairly?**
 
@@ -13,9 +17,23 @@ SPY), the deep learning and foundation-model portfolios did not beat the market,
 years of test data **no strategy's edge over SPY is statistically significant** once you
 account for the 35 configurations tried. An interactive dashboard lets you explore every run.
 
+**Built with:** Python, pandas, NumPy, cvxpy, PyTorch (LSTM + Transformer), Hugging Face
+Chronos-2 with LoRA fine-tuning (PEFT), statistical testing (block bootstrap, Deflated Sharpe
+Ratio), Streamlit + Plotly, pytest and GitHub Actions CI.
+
+**Highlights**
+
+* A leakage-free **walk-forward backtester**: point-in-time S&P 500 membership, trades at the
+  close, drifting weights, transaction costs, and a test period (2020 →) locked away from tuning.
+* **20 strategies in 5 families** on one engine: classic optimizers, a genetic algorithm, an
+  end-to-end deep learning portfolio, a time-series foundation model, and event-driven rebalancing.
+* **Honest evaluation**: every tuning trial is kept, settings are chosen on 2010–2019 with rules
+  fixed in advance, and the winners are checked for luck with bootstrap confidence intervals and
+  the Deflated Sharpe Ratio.
+
 ![Growth of $1](results/baselines/equity.png)
 
-## Results so far (phase 1: classic and evolutionary baselines)
+## Phase 1: classic and evolutionary baselines
 
 Out-of-sample test period, **Jan 2020 → Nov 2026**, monthly rebalancing, 10 bps costs,
 100 most liquid point-in-time S&P 500 members, nothing tuned on this period:
@@ -31,7 +49,7 @@ Out-of-sample test period, **Jan 2020 → Nov 2026**, monthly rebalancing, 10 bp
 | Genetic algorithm | 18.9% | 20.1% | **0.82** | -30.5% | 274% |
 | Genetic algorithm + Wisdom of Crowds | 18.1% | 20.0% | 0.79 | -30.5% | 284% |
 
-What the numbers say so far:
+What the numbers say:
 
 * **Passive is hard to beat.** Equal weight, inverse volatility and risk parity end up
   close to SPY once costs are included.
@@ -289,8 +307,10 @@ src/pfopt/
 app/                Streamlit dashboard
 tests/              unit tests (engine timing, costs, metrics, constraints)
 docs/               methodology and limitations
-legacy/             the original course notebook this project grew from
 ```
+
+The project grew out of a course assignment (a genetic algorithm with Wisdom of Crowds on S&P 500
+data), which was rewritten from scratch into this benchmark.
 
 ## Roadmap
 

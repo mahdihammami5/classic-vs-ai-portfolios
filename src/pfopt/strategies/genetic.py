@@ -1,7 +1,7 @@
 """Genetic Algorithm + Wisdom of Crowds (GA+WoC) portfolio optimizer.
 
-This is the project's original method (see ``legacy/``), rewritten so it can be compared
-fairly with the other strategies:
+This is the method of the course project this repository grew out of, rewritten so it can be
+compared fairly with the other strategies:
 
 * fitness = Sharpe ratio on the trailing window, with a shrunk covariance matrix;
 * vectorized population evaluation (the whole population is one matrix);
