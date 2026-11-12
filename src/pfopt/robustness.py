@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import matplotlib
 
@@ -17,8 +18,10 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
-from pfopt.data.market import MarketData  # noqa: E402
 from pfopt.stats import bootstrap_sharpe, deflated_sharpe_table, drawdown_episodes  # noqa: E402
+
+if TYPE_CHECKING:  # only for type hints: keeps this module light for the dashboard
+    from pfopt.data.market import MarketData
 
 log = logging.getLogger(__name__)
 BENCH = "SPY"

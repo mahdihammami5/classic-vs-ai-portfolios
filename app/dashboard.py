@@ -4,12 +4,19 @@
     pfopt analyze            # once, writes results/analysis/
     streamlit run app/dashboard.py
 
-Reads only the files under ``results/``; no market data download is needed.
+Reads only the files under ``results/``; no market data download is needed. On Streamlit
+Community Cloud the light ``app/requirements.txt`` is installed and ``src/`` is put on the path,
+so the heavy optimizer dependencies are never needed.
 """
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT / "src") not in sys.path:
+    sys.path.insert(0, str(ROOT / "src"))
 
 import numpy as np
 import pandas as pd
@@ -20,7 +27,6 @@ import streamlit as st
 from pfopt.backtest.metrics import drawdown_series, summarize
 from pfopt.robustness import collect_returns
 
-ROOT = Path(__file__).resolve().parents[1]
 RESULTS = ROOT / "results"
 ANALYSIS = RESULTS / "analysis"
 BENCH = "SPY"
