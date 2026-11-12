@@ -30,6 +30,8 @@ from pfopt.robustness import collect_returns
 RESULTS = ROOT / "results"
 ANALYSIS = RESULTS / "analysis"
 BENCH = "SPY"
+BENCH_COLOR = "#8c8c8c"  # mid gray: visible on light and dark backgrounds
+BENCH_LINE = {"dash": "dash", "color": BENCH_COLOR, "width": 2.5}
 DEFAULTS = ["EqualWeight", "MeanVariance", "GA", "GA-Combined", "DeepPortfolio",
             "MV-Chronos2-LoRA"]
 PERIODS = {
@@ -127,13 +129,13 @@ with tab_perf:
     wealth = (1 + span.fillna(0.0)).cumprod()
     fig = px.line(wealth, labels={"value": "Growth of $1", "index": "", "variable": ""},
                   log_y=log_scale)
-    fig.update_traces(selector={"name": BENCH}, line={"dash": "dash", "color": "black"})
+    fig.update_traces(selector={"name": BENCH}, line=BENCH_LINE)
     fig.update_layout(height=430, legend={"orientation": "h", "y": -0.15})
     st.plotly_chart(fig, width="stretch")
 
     dd = span.fillna(0.0).apply(drawdown_series)
     fig = px.line(dd, labels={"value": "Drawdown", "index": "", "variable": ""})
-    fig.update_traces(selector={"name": BENCH}, line={"dash": "dash", "color": "black"})
+    fig.update_traces(selector={"name": BENCH}, line=BENCH_LINE)
     fig.update_layout(height=300, yaxis_tickformat=".0%", showlegend=False)
     st.plotly_chart(fig, width="stretch")
 
@@ -153,8 +155,8 @@ with tab_sig:
             x=s.sharpe, y=s.index, mode="markers",
             error_x={"type": "data", "symmetric": False, "array": s.ci_high - s.sharpe,
                      "arrayminus": s.sharpe - s.ci_low},
-            marker={"color": ["black" if n == BENCH else "#2a6fdb" for n in s.index]}))
-        fig.add_vline(x=float(sig.loc[BENCH, "sharpe"]), line_dash="dash")
+            marker={"color": [BENCH_COLOR if n == BENCH else "#2a6fdb" for n in s.index]}))
+        fig.add_vline(x=float(sig.loc[BENCH, "sharpe"]), line_dash="dash", line_color=BENCH_COLOR)
         fig.update_layout(height=28 * len(s) + 120, xaxis_title="Sharpe ratio (test)")
         st.plotly_chart(fig, width="stretch")
         show = sig[["experiment", "sharpe", "ci_low", "ci_high", "diff_vs_bench", "p_value",
