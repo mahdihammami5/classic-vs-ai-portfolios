@@ -315,7 +315,8 @@ with st.container(border=True):
         log_scale = st.toggle("Log scale", value=True)
     names = all_names if show_all else main_names
     period = c_period.selectbox("Period", list(PERIODS))
-    chosen = c_names.multiselect("Strategies (SPY is always shown)", names, default=main_names,
+    # Turning the switch on selects every strategy; turning it off goes back to the main 7.
+    chosen = c_names.multiselect("Strategies (SPY is always shown)", names, default=names,
                                  key=f"chosen_{show_all}")
 focus = chosen or names  # what the other tabs show
 
@@ -356,10 +357,27 @@ with tab_perf:
     fig.update_layout(height=300, yaxis_tickformat=".0%", showlegend=False)
     st.plotly_chart(fig, width="stretch")
 
+VARIANT_INFO = {n: (fam, text) for fam, items in VARIANTS for n, text in items.items()}
+
+
+def icon_of(n: str) -> str:
+    return DETAILS[n]["icon"] if n in DETAILS else "▫️"
+
+
+def family_of(n: str) -> str:
+    return DETAILS[n]["family"] if n in DETAILS else VARIANT_INFO.get(n, ("Other", ""))[0]
+
+
 with tab_methods:
-    st.markdown(f"**{N_TESTED} strategies in 5 families** were tested with the same "
-                "backtester and the same rules. The page focuses on the **7 main methods**; "
-                "the other variants are listed at the bottom.")
+    if show_all:
+        st.markdown(f"**All {N_TESTED} strategies in 5 families**, tested with the same "
+                    "backtester and the same rules. The 7 main methods have a detailed card; "
+                    "the variants (▫️) have a short one.")
+    else:
+        st.markdown(f"**{N_TESTED} strategies in 5 families** were tested with the same "
+                    "backtester and the same rules. This page focuses on the **7 main "
+                    f"methods**; turn on \"All {N_TESTED} strategies\" at the top to add "
+                    "the variants.")
     st.markdown("##### The rules every method follows")
     for col, (icon, title, text) in zip(st.columns(len(RULES)), RULES, strict=True):
         with col.container(border=True):
@@ -370,38 +388,45 @@ with tab_methods:
     test = returns.loc["2020-01-01":]
     test_rf = market["rf"].reindex(test.index).fillna(0.0)
     score = {}
-    for n in [*main_names, BENCH]:
+    for n in [*names, BENCH]:
         m = summarize(test[n].dropna(), test_rf, turnover.get(n))
         if "turnover" not in m and ("test", n) in saved_turnover.index:
             m["turnover"] = saved_turnover[("test", n)]
         score[n] = m
     spy = score[BENCH]
 
-    st.markdown("##### The 7 main methods at a glance (test period, 2020 →)")
+    heading = f"All {N_TESTED} strategies" if show_all else "The 7 main methods"
+    st.markdown(f"##### {heading} at a glance (test period, 2020 →)")
     glance = pd.DataFrame([{
-        "Method": f"{DETAILS[n]['icon']} {n}", "Family": DETAILS[n]["family"],
+        "Method": f"{icon_of(n)} {n}", "Family": family_of(n),
         "Sharpe": score[n]["sharpe"],
         "vs SPY": score[n]["sharpe"] - spy["sharpe"], "Growth / yr": score[n]["cagr"],
         "Max drawdown": score[n]["max_drawdown"], "Turnover / yr": score[n].get("turnover"),
-    } for n in main_names]).sort_values("Sharpe", ascending=False)
+    } for n in names]).sort_values("Sharpe", ascending=False)
     st.dataframe(
         glance.style.format({"Sharpe": "{:.2f}", "vs SPY": "{:+.2f}", "Growth / yr": "{:.1%}",
                              "Max drawdown": "{:.1%}", "Turnover / yr": "{:.0%}"}, na_rep="–")
         .map(lambda v: f"color: {'#1a7f37' if v > 0 else '#cf222e'}", subset=["vs SPY"]),
         hide_index=True, width="stretch")
+    if show_all and aliases:
+        st.caption("Identical results are listed once: "
+                   + ", ".join(f"{a} = {b}" for a, b in aliases.items()) + ".")
     st.caption(f"SPY over the same period: Sharpe {spy['sharpe']:.2f}, growth "
                f"{spy['cagr']:.1%} a year, max drawdown {spy['max_drawdown']:.1%}.")
 
     st.markdown("##### Explore a method")
-    pick = st.pills("Method", main_names, default="GA" if "GA" in main_names else None,
-                    format_func=lambda n: f"{DETAILS[n]['icon']} {n}",
-                    label_visibility="collapsed")
-    pick = pick or main_names[0]
-    d, m = DETAILS[pick], score[pick]
+    pick = st.pills("Method", names, default="GA" if "GA" in names else None,
+                    format_func=lambda n: f"{icon_of(n)} {n}", label_visibility="collapsed",
+                    key=f"pick_{show_all}")
+    pick = pick or names[0]
     with st.container(border=True):
-        color = FAMILY_COLOR.get(d["family"], "gray")
-        st.markdown(f"### {d['icon']} {pick} &nbsp; :{color}-badge[{d['family']}]")
-        st.markdown(f"*{d['idea']}*")
+        detailed = pick in DETAILS
+        fam = family_of(pick)
+        color = FAMILY_COLOR.get(fam, "gray")
+        extra = "" if detailed else " :gray-badge[Variant]"
+        st.markdown(f"### {icon_of(pick)} {pick} &nbsp; :{color}-badge[{fam}]{extra}")
+        st.markdown(f"*{DETAILS[pick]['idea'] if detailed else VARIANT_INFO[pick][1]}*")
+        m = score[pick]
         k1, k2, k3, k4 = st.columns(4)
         k1.metric("Sharpe (test)", f"{m['sharpe']:.2f}",
                   f"{m['sharpe'] - spy['sharpe']:+.2f} vs SPY")
@@ -411,18 +436,20 @@ with tab_methods:
         to = m.get("turnover")
         k4.metric("Turnover / yr", "–" if to is None or np.isnan(to) else f"{to:.0%}")
 
-        left, right = st.columns([1.25, 1], gap="large")
-        with left:
-            st.markdown("**How it works**")
-            st.markdown("\n".join(f"{i}. {step}" for i, step in enumerate(d["steps"], 1)))
-            st.markdown("**Key facts**")
-            st.markdown("\n".join(f"- **{k}:** {v}" for k, v in d["facts"].items()))
-            with st.expander("The math"):
-                st.latex(d["math"])
-        with right:
-            st.success(f"**Strength.** {d['strength']}", icon="✅")
-            st.warning(f"**Weakness.** {d['weakness']}", icon="⚠️")
-            st.info(f"**Result.** {d['result']}", icon="📊")
+        if detailed:
+            d = DETAILS[pick]
+            left, right = st.columns([1.25, 1], gap="large")
+            with left:
+                st.markdown("**How it works**")
+                st.markdown("\n".join(f"{i}. {step}" for i, step in enumerate(d["steps"], 1)))
+                st.markdown("**Key facts**")
+                st.markdown("\n".join(f"- **{k}:** {v}" for k, v in d["facts"].items()))
+                with st.expander("The math"):
+                    st.latex(d["math"])
+            with right:
+                st.success(f"**Strength.** {d['strength']}", icon="✅")
+                st.warning(f"**Weakness.** {d['weakness']}", icon="⚠️")
+                st.info(f"**Result.** {d['result']}", icon="📊")
 
         wealth = (1 + test[[pick, BENCH]].fillna(0.0)).cumprod()
         fig = px.line(wealth, labels={"value": "Growth of $1", "index": "", "variable": ""},
