@@ -43,6 +43,91 @@ PERIODS = {
 }
 PERIOD_KEY = dict(zip(PERIODS, ["test", "development", "full", "covid_crash", "bear_2022"],
                       strict=True))
+REPO = "https://github.com/mahdihammami5/classic-vs-ai-portfolios"
+
+# Plain-English description of every strategy, grouped by family (shown in the "Methods" tab).
+METHODS = [
+    ("Benchmark", "What a passive investor gets.", {
+        "SPY": "Buy and hold the S&P 500 index fund. Every strategy has to beat this to be "
+               "worth the effort.",
+    }),
+    ("Classic optimizers", "Textbook portfolio construction from finance research. Each month "
+     "they look at the last year of daily returns of the 100 stocks and pick weights.", {
+        "EqualWeight": "The same amount in each stock, reset every month. Very simple, and "
+                       "famously hard to beat.",
+        "InverseVol": "More money in calm stocks, less in jumpy ones: each weight is "
+                      "proportional to 1 / volatility.",
+        "MinVariance": "The mix with the lowest possible risk, using how stocks move together "
+                       "(covariance, with Ledoit-Wolf shrinkage to reduce noise). Ignores "
+                       "expected returns completely.",
+        "MeanVariance": "Markowitz's Nobel-prize method: balance expected return (last year's "
+                        "average, shrunk to reduce noise) against risk.",
+        "RiskParity": "Every stock contributes the same share of the portfolio's total risk.",
+    }),
+    ("Genetic algorithm", "An evolutionary search: instead of solving an equation, it breeds "
+     "better portfolios over many generations.", {
+        "GA": "Starts with 100 random portfolios of about 20 stocks. Each generation, the ones "
+              "with the best Sharpe ratio over the past year are selected, mixed together "
+              "(crossover) and slightly changed at random (mutation). After 150 generations "
+              "the best portfolio is bought. Repeated every month.",
+        "GA+WoC": "Same GA, but \"Wisdom of Crowds\": it averages the 10 best portfolios of "
+                  "the last generation instead of trusting the single best one, which spreads "
+                  "the money over more stocks.",
+    }),
+    ("Deep learning", "A neural network that outputs the portfolio weights directly and is "
+     "trained to maximize the Sharpe ratio, not to forecast prices. It is retrained every "
+     "January on past data only.", {
+        "DeepPortfolio": "Looks at the last 60 days of each stock. An LSTM with attention "
+                         "summarizes each stock's history, then a Transformer layer lets the "
+                         "stocks \"see\" each other before a weight is given to each. The loss "
+                         "is the Sharpe ratio of the next 21 days plus a penalty on the worst 5% "
+                         "of days (CVaR).",
+        "DeepPortfolio-SharpeOnly": "The same network trained on the Sharpe ratio alone, "
+                                    "without the worst-days (CVaR) penalty.",
+        "DeepPortfolio-v2": "Adds richer inputs: a profile of each stock (momentum, short-term "
+                            "reversal, volatility, beta) and the VIX fear index. Picked among 6 "
+                            "variants using 2010-2019 data only.",
+    }),
+    ("Foundation model", "Predict, then optimize. All five use the same Markowitz optimizer; "
+     "only the forecast of each stock's next-month return changes, so any difference comes "
+     "from the forecast.", {
+        "MV-HistoricalMean": "Forecast = last year's average return (the classic approach).",
+        "MV-Momentum": "Forecast = recent winners keep winning (return over the past 12 months, "
+                       "skipping the last one).",
+        "MV-Chronos2-ZeroShot": "Chronos-2 is a forecasting model from Amazon pre-trained on a "
+                                "huge number of time series (a large language model, but for "
+                                "numbers). It forecasts each stock 21 days ahead from its last "
+                                "512 days, with no training on stocks at all.",
+        "MV-Chronos2-ZeroShot-Cross": "The same, but the stocks are forecast together so the "
+                                      "model can share information across them "
+                                      "(cross-learning).",
+        "MV-Chronos2-LoRA": "Chronos-2 fine-tuned every January on past stock prices with LoRA, "
+                            "a cheap method that trains a small add-on instead of the whole "
+                            "model.",
+    }),
+    ("Smarter rebalancing", "The GA trades a lot (about 2.7x its portfolio a year), and every "
+     "trade costs money. These variants change when and how much it trades.", {
+        "GA-CostAware": "The GA's score becomes Sharpe - 4 x the share of the portfolio it "
+                        "would have to trade, so it only changes holdings when it is worth it.",
+        "GA-Band": "Re-optimizes every month, but only trades if the new portfolio differs "
+                   "from the current one by at least 20%.",
+        "GA-EventVIX": "Rebalances every quarter, plus extra times when the VIX fear index "
+                       "crosses 30 or the holdings drift 10% away from target (checked weekly).",
+        "GA-Combined": "Cost-aware score + the event-driven schedule above.",
+        "GA+WoC-Combined": "The same combination with Wisdom of Crowds.",
+    }),
+]
+TERMS = {
+    "CAGR": "average yearly growth.",
+    "Volatility": "how much returns swing, per year. Lower is calmer.",
+    "Sharpe ratio": "return above the risk-free rate divided by volatility: return per unit "
+                    "of risk. The main score here; SPY's is about 0.6 on the test period.",
+    "Max drawdown": "the worst fall from a peak to a bottom.",
+    "Turnover / yr": "how much of the portfolio is bought and sold per year (100% = the "
+                     "whole portfolio once). Each trade costs 0.1%.",
+    "Test period": "2020 onward. Never used to tune any method, so it shows how they would "
+                   "have done on new data.",
+}
 FAMILY = {
     "baselines": "Classic / GA", "deep": "Deep learning", "deep_v2": "Deep learning",
     "foundation": "Foundation model", "rebalancing": "Smarter rebalancing",
@@ -93,22 +178,24 @@ names = [c for c in returns.columns if c != BENCH]
 st.title("Classic vs AI portfolios")
 st.caption("Walk-forward backtests on a point-in-time S&P 500 universe (100 most liquid "
            "stocks), monthly decisions, 10 bps costs, long-only, 10% cap. The 2020→ test period "
-           "was never used for tuning.")
+           "was never used for tuning. New here? Start with the **Methods** tab. "
+           f"[Source code]({REPO})")
 
-with st.sidebar:
-    st.header("Settings")
-    period = st.selectbox("Period", list(PERIODS))
-    chosen = st.multiselect("Strategies", names, default=[n for n in DEFAULTS if n in names])
-    log_scale = st.toggle("Log scale", value=True)
-    st.markdown("[Source code](https://github.com/mahdihammami5/classic-vs-ai-portfolios)")
+# Controls stay at the top of the page (the sidebar is hidden by default on phones).
+with st.container(border=True):
+    c_period, c_names, c_log = st.columns([1.3, 5, 0.9], vertical_alignment="bottom")
+    period = c_period.selectbox("Period", list(PERIODS))
+    chosen = c_names.multiselect("Strategies (SPY is always shown)", names,
+                                 default=[n for n in DEFAULTS if n in names])
+    log_scale = c_log.toggle("Log scale", value=True)
 
 start, end = PERIODS[period]
 cols = [*chosen, BENCH]
 span = returns.loc[start:end, cols].dropna(axis=1, how="all")
 rf = market["rf"].reindex(span.index).fillna(0.0)
 
-tab_perf, tab_sig, tab_crisis, tab_port, tab_reb = st.tabs(
-    ["Performance", "Is it luck?", "Crises", "Portfolio explorer", "When to trade"])
+tab_perf, tab_methods, tab_sig, tab_crisis, tab_port, tab_reb = st.tabs(
+    ["Performance", "Methods", "Is it luck?", "Crises", "Portfolio explorer", "When to trade"])
 
 with tab_perf:
     rows = []
@@ -138,6 +225,28 @@ with tab_perf:
     fig.update_traces(selector={"name": BENCH}, line=BENCH_LINE)
     fig.update_layout(height=300, yaxis_tickformat=".0%", showlegend=False)
     st.plotly_chart(fig, width="stretch")
+
+with tab_methods:
+    st.markdown("**20 strategies in 5 families**, all run by the same backtester with the same "
+                "rules: every month (unless stated otherwise) a strategy sees only the past, "
+                "picks weights for the 100 most liquid S&P 500 stocks (long-only, at most 10% in "
+                "one stock), trades at the close and pays 0.1% on everything it trades. "
+                "Strategies picked in the selector above are marked with ●.")
+    documented = set()
+    for family, intro, items in METHODS:
+        st.subheader(family)
+        st.caption(intro)
+        for n, text in items.items():
+            documented.add(n)
+            mark = "● " if n in chosen else ""
+            st.markdown(f"- {mark}**{n}**: {text}")
+    missing = [n for n in names if n not in documented]
+    if missing:
+        st.subheader("Other")
+        st.markdown("\n".join(f"- **{n}**" for n in missing))
+    st.subheader("Key terms")
+    st.markdown("\n".join(f"- **{k}**: {v}" for k, v in TERMS.items()))
+    st.markdown(f"Full details: [methodology]({REPO}/blob/main/docs/methodology.md).")
 
 with tab_sig:
     sig = optional(ANALYSIS / "significance_test.csv", index_col=0)
@@ -183,7 +292,8 @@ with tab_crisis:
 
 with tab_port:
     with_w = [n for n in names if weights_for(n, origin[n]) is not None]
-    default = with_w.index("GA") if "GA" in with_w else 0
+    pick = [n for n in chosen if n in with_w] + ["GA"]
+    default = with_w.index(pick[0]) if pick[0] in with_w else 0
     name = st.selectbox("Strategy", with_w, index=default)
     w = weights_for(name, origin[name])
     w = w.loc[:, (w > 0).any()]

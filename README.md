@@ -250,8 +250,8 @@ pip install -e ".[dashboard]"
 streamlit run app/dashboard.py
 ```
 
-Five tabs: performance for any period and set of strategies, the significance tests, a crisis
-heatmap, a **portfolio explorer** (holdings at any rebalance date, allocation over time, which
+Six tabs: performance for any period and set of strategies, a plain-English explanation of
+every method, the significance tests, a crisis heatmap, a **portfolio explorer** (holdings at any rebalance date, allocation over time, which
 stocks drove the return) and a **rebalancing timeline** showing every decision with its trigger
 (schedule, drift, VIX) next to the VIX. It reads only the committed `results/` folder, so it
 runs right after cloning, without downloading any market data.
